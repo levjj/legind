@@ -17,8 +17,13 @@ TestCase.subclass('legind.tests.ProfilingTests',
             hello(1000);
         }
         var report = this.profiler.rewriteAndProfile("(" + src + ")()");
-        this.assert(report.hasOwnProperty("foo"));
-        this.assertEquals(3, report["foo"].n);
+        this.assertEquals(3, report.length, "more than two reports");
+        this.assertEquals("hello", report[2].name);
+        this.assertMatches(["n"], report[2].args);
+        this.assertEquals(3, report[2].inv.length, "expect three invocations");
+        this.assertEquals(10, report[2].inv[0][0]);
+        this.assertEquals(100, report[2].inv[1][0]);
+        this.assertEquals(1000, report[2].inv[2][0]);
     }
 });
 
