@@ -17,6 +17,7 @@ Object.subclass('legind.instrumentation.Profiler',
     },
     record: function(id, time, args) {
         args.push(time);
+        this.report[id].total += time;
         this.report[id].inv.push(args);
     },
 },
@@ -39,7 +40,11 @@ Object.subclass('legind.instrumentation.Profiler',
         ast = new lively.ast.Call([0,0], ast, [])
         var rewriter = new legind.instrumentation.Rewriter();
         var rewritten = rewriter.visit(ast).asJS();
-        this.report = rewriter.templates.map(function(e) { e.inv = []; return e; });
+        this.report = rewriter.templates.map(function(e) {
+            e.inv = [];
+            e.total = 0;
+            return e;
+        });
         return this.profile(eval.bind(null,rewritten));
     }
 });
