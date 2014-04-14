@@ -245,7 +245,31 @@ lively.BuildSpec('legind.ui.Profiler', {
             name: "PSource",
             sourceModule: "lively.morphic.TextCore",
             syntaxHighlightingWhileTyping: true,
-            textString: "function linear(n) {\n\
+            textString: "function quicksort(arr) {\n\
+    if (arr.length == 0) return arr;\n\
+    var pivot = arr.pop();\n\
+    var left = [];\n\
+    var right = [];\n\
+    for (var i = 0; i < arr.length; i++) {\n\
+        if (arr[i] < pivot) {\n\
+            left.push(arr[i]);\n\
+        } else {\n\
+            right.push(arr[i]);\n\
+        }\n\
+    }\n\
+    var left = quicksort(left);\n\
+    var right = quicksort(right);\n\
+    return left.concat([pivot]).concat(right);\n\
+}\n\n\
+var n = 5000;\n\
+for (var i = 0; i < n; i += 40) {\n\
+    var arr = [];\n\
+    for (var j = 0; j < i; j++) {\n\
+        arr.push(n.randomSmallerInteger());\n\
+    }\n\
+    quicksort(arr);\n\
+}\n",
+            textString2: "function linear(n) {\n\
     var sum = 0;\n\
     for (var i = 1; i < n; i += 1) {\n\
         sum += Math.sqrt(i);\n\
