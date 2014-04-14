@@ -179,18 +179,20 @@ Object.subclass('legind.instrumentation.Profiler',
         var rewriter = new legind.instrumentation.Rewriter();
         var rewritten = rewriter.visit(ast).asJS();
         this.report = rewriter.templates.map(function(e) {
-            e.inv = [];
-            e.total = 0;
-            e.cmodels = [];
-            e.args.each(function(arg,idx) {
-                e.cmodels.push(new legind.instrumentation.CLinear(idx));
-                e.cmodels.push(new legind.instrumentation.CQuadratic(idx));
-                e.cmodels.push(new legind.instrumentation.CCubic(idx));
-                e.cmodels.push(new legind.instrumentation.CLogarithmic(idx));
-                //e.cmodels.push(new legind.instrumentation.CHyperLogarithmic(idx));
-                e.cmodels.push(new legind.instrumentation.CExponential(idx));
-            });
-            return e;
+            return Object.extend({
+                inv: [],
+                total: 0,
+                cmodels: e.args.map(function(arg, idx) {
+                    return [
+                        new legind.instrumentation.CLinear(idx),
+                        new legind.instrumentation.CQuadratic(idx),
+                        new legind.instrumentation.CCubic(idx),
+                        new legind.instrumentation.CLogarithmic(idx),
+                        new legind.instrumentation.CLinearithmic(idx),
+                        new legind.instrumentation.CExponential(idx)
+                    ];
+                }).flatten()
+            }, e);
         });
         return this.profile(eval.bind(null,rewritten));
     }
