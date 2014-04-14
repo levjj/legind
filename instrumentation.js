@@ -19,7 +19,7 @@ Object.subclass('legind.instrumentation.CModel',
         if (this.varX > 0) {
             var beta = this.covarXY / this.varX;
             var pred = 0|(this.meanY - beta* this.meanX + beta* x);
-            this.loss = (0|(.9 * this.loss)) + (y - pred) * (y - pred);
+            this.loss = (0|(.99 * this.loss)) + (y - pred) * (y - pred);
         }
         this.n++;
         var meanX1 = this.meanX + (x - this.meanX) / this.n;
