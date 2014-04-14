@@ -353,7 +353,7 @@ for (var i = 1; i < 120; i++) {\n\
                     tab.setBorderWidth(0);
                     tab.setExtent(tab.getExtent().withX(145));
                     container.activateTab(tab);
-                    var pane = container.submorphs[1];
+                    var pane = tab.getPane();
                     pane.setBorderWidth(0);
                     pane.setClipMode({x:"hidden",y:"auto"});
                     pane.setLayouter(new lively.morphic.Layout.VerticalScrollerLayout(pane));
