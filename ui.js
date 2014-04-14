@@ -66,18 +66,44 @@ lively.BuildSpec('legind.ui.ProfileResult', {
             this.resultsText.textString = "Select function";
         }
     },
-    createArgumentTab: function createArgumentTab(container, invocations, arg, idx) {
+    createChart: function(pane, entry, idx) {
+        var chart = new legind.ui.JQPlot();
+        (function () {
+            chart.plot(entry.inv, idx);
+        }).delay(0);
+        pane.addMorph(chart);
+    },
+    createCModelButtons: function(pane, entry, idx) {
+        var innerPane = new lively.morphic.Morph();
+        innerPane.layout = {resizeWidth: true, resizeHeight: false};
+        innerPane.setBorderWidth(0);
+        innerPane.setFill(null);
+        innerPane.setLayouter(new lively.morphic.Layout.HorizontalLayout(innerPane));
+        pane.addMorph(innerPane);
+        entry.cmodels.select(function(cmodel) {
+            return cmodel.argIdx === idx;
+        }).each(function(cmodel) {
+            var txt = new lively.morphic.Text(rect(0,0,65,25), cmodel.name());
+            txt.beLabel();
+            txt.setPadding(rect(5,5,0,0));
+            txt.setFill(Color.web.salmon.lighter(2));
+            txt.setBorderWidth(0);
+            txt.setBorderRadius(5);
+            txt.setFontSize(11);
+            txt.setFixedWidth(true);
+            txt.setFixedHeight(true);
+            innerPane.addMorph(txt)
+        });
+    },
+    createArgumentTab: function createArgumentTab(container, entry, arg, idx) {
         var tab = container.addTabLabeled(arg);
         tab.setBorderWidth(2);
         tab.closeButton.remove();
         var pane = tab.getPane();
         pane.setBorderWidth(0);
         pane.setLayouter(new lively.morphic.Layout.VerticalScrollerLayout(pane));
-        var chart = new legind.ui.JQPlot();
-        (function () {
-            chart.plot(invocations, idx);
-        }).delay(0);
-        pane.addMorph(chart);
+        this.createChart(pane, entry, idx);
+        this.createCModelButtons(pane, entry, idx);
     },
     onstore: function onstore() {
         this.results = null;
@@ -98,11 +124,19 @@ lively.BuildSpec('legind.ui.ProfileResult', {
         var pane = tab.getPane();
         pane.setBorderWidth(0);
         pane.setLayouter(new lively.morphic.Layout.VerticalScrollerLayout(pane));
-        var str = "Total time = " + entry.total + "ms";
-        var txt = new lively.morphic.Text(rect(0,0,100,100), str);
+        var txt = new lively.morphic.Text(rect(0,0,100,100), "");
+        txt.setFontSize(12);
         txt.layout = {resizeWidth: true};
         txt.setFill(null);
         txt.setBorderWidth(0);
+        entry.args.each(function(arg,idx) {
+            txt.appendRichText("\n" + arg + ":\n", {fontSize: 12,fontWeight: "bold"});
+            entry.cmodels.select(function(cmodel) {
+                return cmodel.argIdx === idx;
+            }).each(function(cmodel) {
+                txt.appendRichText(cmodel.describe(), {fontSize: 10});
+            });
+        });
         pane.addMorph(txt);
         return tab;
     },
@@ -110,7 +144,7 @@ lively.BuildSpec('legind.ui.ProfileResult', {
         var container = new lively.morphic.TabContainer();
         container.layout = {resizeWidth: true, resizeHeight: true, adjustForNewBounds: true};
         var summary = this.createSummaryTab(container, entry);
-        entry.args.each(this.createArgumentTab.bind(this, container, entry.inv));
+        entry.args.each(this.createArgumentTab.bind(this, container, entry));
         container.activateTab(summary);
         this.addMorph(container);
     },
@@ -329,34 +363,47 @@ for (var i = 1; i < 120; i++) {\n\
 lively.morphic.HtmlWrapperMorph.subclass('legind.ui.JQPlot',
 'initializing', {
     initialize: function($super) {
-        $super(lively.pt(300,400));
+        $super(lively.pt(300,360));
         this.layout = {resizeWidth: true, resizeHeight: false};
         this.setFill(null);
         this.setBorderWidth(0);
+        this.sid = "shape" + (new UUID()).id.substr(0,8);
     }
 },
 'rendering', {
-    render: function(data) {
-        var id = "shape" + (new UUID()).id.substr(0,8);
-        this.renderContext().shapeNode.setAttribute('id', id);
-        jQuery.jqplot(id, [data], {
+    render: function(data, optModel) {
+        var d = optModel ? [data, model] : [data];
+        this.renderContext().shapeNode.setAttribute('id', this.sid);
+        jQuery.jqplot(id, d, {
             axesDefaults: {
                 labelRenderer: jQuery.jqplot.CanvasAxisLabelRenderer,
                 tickRenderer: jQuery.jqplot.CanvasAxisTickRenderer
             },
-            series:[{showLine:false}],
+            series:[{showLine:false}, {showLine:true}],
             axes:{
                 xaxis: { label: 'Input size', pad: 0 },
                 yaxis: { label: 'Time in ms', pad: 0 }
             }
         });
     },
-    plot: function(report, idx) {
+    processData: function(report, idx) {
         var data = [];
         report.each(function(entry) {
             data.push([entry.args[idx], entry.time]);
         });
-        this.render(data);
+        return data;
+    },
+    plot: function(report, idx) {
+        this.render(this.processData(report, idx));
+    },
+    plotModel: function(report, idx, model) {
+        var data = this.processData(report, idx);
+        var modelData = [];
+        var max = max(data);
+        for (var i = 0; i < max; i++) {
+            modelData.push([i, model.predict(i)]);
+        }
+        this.render(data, modelData);
     }
 });
 

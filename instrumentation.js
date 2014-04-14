@@ -38,6 +38,12 @@ Object.subclass('legind.instrumentation.CModel',
     predict: function(args) {
         return this.alpha() + this.beta() * this.kernel(args[this.argIdx]);
     }
+},
+'interface', {
+    describe: function() {
+        var log = this.loss;
+        return this.name() + ":  " + (0|log) + "\n";
+    }
 });
 
 legind.instrumentation.CModel.subclass('legind.instrumentation.CLinear',
@@ -45,12 +51,64 @@ legind.instrumentation.CModel.subclass('legind.instrumentation.CLinear',
     kernel: function(x) {
         return x;
     }
+}, 'interface', {
+    name: function() {
+        return "O(n)";
+    }
 });
 
 legind.instrumentation.CModel.subclass('legind.instrumentation.CQuadratic',
 'analysis', {
     kernel: function(x) {
         return x * x;
+    }
+}, 'interface', {
+    name: function() {
+        return "O(n²)";
+    }
+});
+
+legind.instrumentation.CModel.subclass('legind.instrumentation.CCubic',
+'analysis', {
+    kernel: function(x) {
+        return x * x * x;
+    }
+}, 'interface', {
+    name: function() {
+        return "O(n³)";
+    }
+});
+
+legind.instrumentation.CModel.subclass('legind.instrumentation.CLogarithmic',
+'analysis', {
+    kernel: function(x) {
+        return Math.log(x);
+    }
+}, 'interface', {
+    name: function() {
+        return "O(log n)";
+    }
+});
+
+legind.instrumentation.CModel.subclass('legind.instrumentation.CHyperLogarithmic',
+'analysis', {
+    kernel: function(x) {
+        return x * Math.log(x);
+    }
+}, 'interface', {
+    name: function() {
+        return "O(x log x)";
+    }
+});
+
+legind.instrumentation.CModel.subclass('legind.instrumentation.CExponential',
+'analysis', {
+    kernel: function(x) {
+        return Math.pow(2,x);
+    }
+}, 'interface', {
+    name: function() {
+        return "O(2ⁿ)";
     }
 });
 
@@ -109,6 +167,10 @@ Object.subclass('legind.instrumentation.Profiler',
             e.args.each(function(arg,idx) {
                 e.cmodels.push(new legind.instrumentation.CLinear(idx));
                 e.cmodels.push(new legind.instrumentation.CQuadratic(idx));
+                e.cmodels.push(new legind.instrumentation.CCubic(idx));
+                e.cmodels.push(new legind.instrumentation.CLogarithmic(idx));
+                //e.cmodels.push(new legind.instrumentation.CHyperLogarithmic(idx));
+                e.cmodels.push(new legind.instrumentation.CExponential(idx));
             });
             return e;
         });
