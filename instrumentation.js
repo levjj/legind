@@ -35,8 +35,11 @@ Object.subclass('legind.instrumentation.CModel',
     beta: function() {
         return this.covarXY / this.varX;
     },
+    _predict: function(arg) {
+        return this.alpha() + this.beta() * this.kernel(arg);
+    },
     predict: function(args) {
-        return this.alpha() + this.beta() * this.kernel(args[this.argIdx]);
+        return this._predict(args[this.argIdx]);
     }
 },
 'interface', {

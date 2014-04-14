@@ -69,7 +69,7 @@ lively.BuildSpec('legind.ui.ProfileResult', {
     createChart: function(pane, entry, idx) {
         var chart = new legind.ui.JQPlot();
         (function () {
-            chart.plot(entry.inv, idx);
+            chart.plot(entry, idx, []);
         }).delay(0);
         pane.addMorph(chart);
     },
@@ -77,21 +77,34 @@ lively.BuildSpec('legind.ui.ProfileResult', {
         var innerPane = new lively.morphic.Morph();
         innerPane.layout = {resizeWidth: true, resizeHeight: false};
         innerPane.setBorderWidth(0);
+        innerPane.disableGrabbing();
         innerPane.setFill(null);
         innerPane.setLayouter(new lively.morphic.Layout.HorizontalLayout(innerPane));
         pane.addMorph(innerPane);
         entry.cmodels.select(function(cmodel) {
             return cmodel.argIdx === idx;
-        }).each(function(cmodel) {
+        }).reverse().each(function(cmodel) {
             var txt = new lively.morphic.Text(rect(0,0,65,25), cmodel.name());
-            txt.beLabel();
+            txt.applyStyle({allowInput: false});
             txt.setPadding(rect(5,5,0,0));
-            txt.setFill(Color.web.salmon.lighter(2));
+            txt.setFill(Color.web.gray.lighter(2));
             txt.setBorderWidth(0);
             txt.setBorderRadius(5);
             txt.setFontSize(11);
             txt.setFixedWidth(true);
             txt.setFixedHeight(true);
+            txt.cmodel = cmodel;
+            txt.addScript(function onMouseDown(evt) {
+                if (!evt.isLeftMouseButtonDown) return $super(evt);
+                if (this.activated) {
+                    this.activated = false;
+                    this.owner.owner.submorphs[0].removeModel(this.cmodel);
+                } else {
+                    this.activated = true;
+                    this.owner.owner.submorphs[0].addModel(this.cmodel);
+                }
+                this.setFill((this.activated ? Color.blue : Color.web.gray).lighter(2));
+            });
             innerPane.addMorph(txt)
         });
     },
@@ -368,42 +381,61 @@ lively.morphic.HtmlWrapperMorph.subclass('legind.ui.JQPlot',
         this.setFill(null);
         this.setBorderWidth(0);
         this.sid = "shape" + (new UUID()).id.substr(0,8);
+        this.cmodels = [];
     }
 },
 'rendering', {
-    render: function(data, optModel) {
-        var d = optModel ? [data, model] : [data];
-        this.renderContext().shapeNode.setAttribute('id', this.sid);
-        jQuery.jqplot(id, d, {
+    prepareData: function() {
+        var data = [this.data];
+        var series = [{showLine:false, showMarker: true}];
+        this.cmodels.each(function(model) {
+            var modelData = [];
+            for (var i = 0; i < this.maxX; i += this.maxX / 30) {
+                var y = model._predict(i);
+                if (y >= 0 && y < this.maxY) modelData.push([i, y]);
+            }
+            data.push(modelData);
+            series.push({showLine:true, showMarker: false});
+        }, this);
+        return [data, series];
+    },
+    render: function() {
+        var shape = jQuery(this.renderContext().shapeNode);
+        shape.empty().attr('id', this.sid);
+        var data = this.prepareData();
+        jQuery.jqplot(this.sid, data[0], {
             axesDefaults: {
                 labelRenderer: jQuery.jqplot.CanvasAxisLabelRenderer,
                 tickRenderer: jQuery.jqplot.CanvasAxisTickRenderer
             },
-            series:[{showLine:false}, {showLine:true}],
+            series: data[1],
             axes:{
                 xaxis: { label: 'Input size', pad: 0 },
                 yaxis: { label: 'Time in ms', pad: 0 }
             }
         });
     },
-    processData: function(report, idx) {
-        var data = [];
-        report.each(function(entry) {
-            data.push([entry.args[idx], entry.time]);
-        });
-        return data;
-    },
-    plot: function(report, idx) {
-        this.render(this.processData(report, idx));
-    },
-    plotModel: function(report, idx, model) {
-        var data = this.processData(report, idx);
-        var modelData = [];
-        var max = max(data);
-        for (var i = 0; i < max; i++) {
-            modelData.push([i, model.predict(i)]);
+    plot: function(entry, idx) {
+        this.data = [];
+        this.maxX = 0;
+        this.maxY = 0;
+        for (var i = 0; i < entry.inv.length; i++) {
+            var e = entry.inv[i];
+            var x = e.args[idx];
+            var y = e.time;
+            if (x > this.maxX) this.maxX = x;
+            if (y > this.maxY) this.maxY = y;
+            this.data.push([x, y]);
         }
-        this.render(data, modelData);
+        this.render();
+    },
+    addModel: function(cmodel) {
+        this.cmodels.push(cmodel);
+        this.render();
+    },
+    removeModel: function(cmodel) {
+        this.cmodels.remove(cmodel);
+        this.render();
     }
 });
 
