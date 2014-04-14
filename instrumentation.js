@@ -123,7 +123,22 @@ Object.subclass('legind.instrumentation.Profiler',
 },
 'profiling', {
     startTimer: function(id, args) {
-        this.timers.push([Date.now(), id, args]);
+        var nargs = args.length;
+        var fargs = new Array(nargs);
+        for (var i = 0; i < nargs; i++) {
+            var a =  args[i];
+            var t = typeof a;
+            if (t === "number") {
+                fargs[i] = a;
+            } else if (t === "string") {
+                fargs[i] = a.length;
+            } else if (args instanceof Array) {
+                fargs[i] = a.length;
+            } else {
+                fargs[i] = 1;
+            }
+        }
+        this.timers.push([Date.now(), id, fargs]);
     },
     stopTimer: function() {
         var last = this.timers.pop();
