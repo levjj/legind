@@ -44,7 +44,7 @@ Object.subclass('legind.instrumentation.CModel',
 },
 'interface', {
     describe: function() {
-        var log = this.loss;
+        var log = Math.log(1 + this.loss / this.meanY);
         return this.name() + ":  " + (0|log) + "\n";
     }
 });
