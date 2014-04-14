@@ -19,7 +19,7 @@ Object.subclass('legind.instrumentation.CModel',
         if (this.varX > 0) {
             var beta = this.covarXY / this.varX;
             var pred = 0|(this.meanY - beta* this.meanX + beta* x);
-            this.loss = (0|(.99 * this.loss)) + (y - pred) * (y - pred);
+            this.loss += Math.abs(y - pred);
         }
         this.n++;
         var meanX1 = this.meanX + (x - this.meanX) / this.n;
@@ -44,7 +44,7 @@ Object.subclass('legind.instrumentation.CModel',
 },
 'interface', {
     describe: function() {
-        var log = Math.log(1 + this.loss / this.meanY);
+        var log = this.loss / this.n;
         return this.name() + ":  " + (0|log) + "\n";
     }
 });
