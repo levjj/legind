@@ -1,5 +1,59 @@
 module('legind.instrumentation').requires('lively.ast.Rewriting').toRun(function() {
 
+Object.subclass('legind.instrumentation.CModel',
+'initializing', {
+    initialize: function(argIdx) {
+        this.argIdx = argIdx;
+        this.n = 0;
+        this.meanX = 0;
+        this.meanY = 0;
+        this.varX = 0;
+        this.covarXY = 0;
+        this.loss = 0;
+    }
+},
+'analysis', {
+    fit: function(args, time) {
+        var x = this.kernel(args[this.argIdx]);
+        var y = time;
+        if (this.varX > 0) {
+            var beta = this.covarXY / this.varX;
+            var pred = 0|(this.meanY - beta* this.meanX + beta* x);
+            this.loss = (0|(.9 * this.loss)) + (y - pred) * (y - pred);
+        }
+        this.n++;
+        var meanX1 = this.meanX + (x - this.meanX) / this.n;
+        var meanY1 = this.meanY + (y - this.meanY) / this.n;
+        this.varX = this.varX + (x - this.meanX) * (x - meanX1);
+        this.covarXY = this.covarXY + (x - this.meanX) * (y - meanY1);
+        this.meanX = meanX1;
+        this.meanY = meanY1;
+    },
+    alpha: function() {
+        return this.meanY - this.meanX * this.beta();
+    },
+    beta: function() {
+        return this.covarXY / this.varX;
+    },
+    predict: function(args) {
+        return this.alpha() + this.beta() * this.kernel(args[this.argIdx]);
+    }
+});
+
+legind.instrumentation.CModel.subclass('legind.instrumentation.CLinear',
+'analysis', {
+    kernel: function(x) {
+        return x;
+    }
+});
+
+legind.instrumentation.CModel.subclass('legind.instrumentation.CQuadratic',
+'analysis', {
+    kernel: function(x) {
+        return x * x;
+    }
+});
+
 Object.subclass('legind.instrumentation.Profiler',
 'initializing', {
     initialize: function() {
@@ -13,12 +67,20 @@ Object.subclass('legind.instrumentation.Profiler',
     stopTimer: function() {
         var last = this.timers.pop();
         var time = Date.now() - last[0];
-        this.record(last[1], time, last[2]);
+        if (time > 0) {
+            this.record(last[1], time, last[2]);
+        }
     },
     record: function(id, time, args) {
-        args.push(time);
-        this.report[id].total += time;
-        this.report[id].inv.push(args);
+        var report = this.report[id];
+        report.total += time;
+        var nmodels = report.cmodels.length;
+        for (var i = 0; i < nmodels; i++) {
+            report.cmodels[i].fit(args, time);
+        }
+        if (report.inv.length <= 120) {
+            report.inv.push({args: args, time: time});
+        }
     },
 },
 'reporting', {
@@ -43,6 +105,11 @@ Object.subclass('legind.instrumentation.Profiler',
         this.report = rewriter.templates.map(function(e) {
             e.inv = [];
             e.total = 0;
+            e.cmodels = [];
+            e.args.each(function(arg,idx) {
+                e.cmodels.push(new legind.instrumentation.CLinear(idx));
+                e.cmodels.push(new legind.instrumentation.CQuadratic(idx));
+            });
             return e;
         });
         return this.profile(eval.bind(null,rewritten));

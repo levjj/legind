@@ -354,7 +354,7 @@ lively.morphic.HtmlWrapperMorph.subclass('legind.ui.JQPlot',
     plot: function(report, idx) {
         var data = [];
         report.each(function(entry) {
-            data.push([entry[idx], entry[entry.length - 1]]);
+            data.push([entry.args[idx], entry.time]);
         });
         this.render(data);
     }
