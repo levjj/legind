@@ -93,14 +93,14 @@ legind.instrumentation.CModel.subclass('legind.instrumentation.CLogarithmic',
     }
 });
 
-legind.instrumentation.CModel.subclass('legind.instrumentation.CHyperLogarithmic',
+legind.instrumentation.CModel.subclass('legind.instrumentation.CLinearithmic',
 'analysis', {
     kernel: function(x) {
         return x * Math.log(x);
     }
 }, 'interface', {
     name: function() {
-        return "O(x log x)";
+        return "O(n log n)";
     }
 });
 
