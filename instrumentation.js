@@ -14,6 +14,7 @@ Object.subclass('legind.instrumentation.CModel',
 },
 'analysis', {
     fit: function(args, time) {
+        if (this.argIdx >= args.length) return;
         var x = this.kernel(args[this.argIdx]);
         var y = time;
         if (this.varX > 0) {
@@ -117,8 +118,13 @@ legind.instrumentation.CModel.subclass('legind.instrumentation.CExponential',
 
 Object.subclass('legind.instrumentation.Profiler',
 'initializing', {
-    initialize: function() {
+    initialize: function(instructions) {
         this.timers = [];
+        if (instructions) {
+            this.instructions = true;
+        } else {
+            this.time = true;
+        }
     }
 },
 'profiling', {
@@ -132,20 +138,26 @@ Object.subclass('legind.instrumentation.Profiler',
                 fargs[i] = a;
             } else if (t === "string") {
                 fargs[i] = a.length;
-            } else if (args instanceof Array) {
+            } else if (a instanceof Array) {
                 fargs[i] = a.length;
-            } else {
+            } else if (a) {
                 fargs[i] = 1;
+            } else {
+                fargs[i] = 0;
             }
         }
-        this.timers.push([Date.now(), id, fargs]);
+        var y = this.instructions ? legind._calls : Date.now();
+        this.timers.push([y, id, fargs]);
     },
     stopTimer: function() {
         var last = this.timers.pop();
-        var time = Date.now() - last[0];
-        if (time > 10) {
-            this.record(last[1], time, last[2]);
+        if (this.time) {
+            var y = Date.now() - last[0];
+            if (y < 10) return;
+        } else {
+            var y = legind._calls - last[0];
         }
+        this.record(last[1], y, last[2]);
     },
     record: function(id, time, args) {
         var report = this.report[id];
@@ -167,6 +179,9 @@ Object.subclass('legind.instrumentation.Profiler',
 'running', {
     profile: function(cb) {
         legind.instrumentation.Profiler.current = this;
+        if (this.instructions) {
+            legind._calls = 0;
+        }
         cb();
         return this.getReport();
     },
@@ -176,9 +191,15 @@ Object.subclass('legind.instrumentation.Profiler',
             ast = new lively.ast.Function([0,0], ast, []);
         }
         ast = new lively.ast.Call([0,0], ast, [])
-        var rewriter = new legind.instrumentation.Rewriter();
-        var rewritten = rewriter.visit(ast).asJS();
-        this.report = rewriter.templates.map(function(e) {
+        var prewriter = new legind.instrumentation.ProfilingTransformation();
+        var rewrittenAST = prewriter.visit(ast);
+        if (this.instructions) {
+            var irewriter = new legind.instrumentation.InstructionCountingTransformation();
+            var rewritten = irewriter.rewrite(rewrittenAST);
+        } else {
+            var rewritten = rewrittenAST.asJS();
+        }
+        this.report = prewriter.templates.map(function(e) {
             return Object.extend({
                 inv: [],
                 total: 0,
@@ -198,7 +219,7 @@ Object.subclass('legind.instrumentation.Profiler',
     }
 });
 
-lively.ast.Rewriting.Transformation.subclass('legind.instrumentation.Rewriter',
+lively.ast.Rewriting.Transformation.subclass('legind.instrumentation.ProfilingTransformation',
 'initialization', {
     initialize: function($super) {
         $super();
@@ -255,6 +276,19 @@ lively.ast.Rewriting.Transformation.subclass('legind.instrumentation.Rewriter',
         return new lively.ast.Function(body.pos,
                                        body,
                                        this.visitNodes(node.args));
+    }
+});
+
+lively.ast.Rewriting.Transformation.subclass('legind.instrumentation.InstructionCountingTransformation',
+'rewriting', {
+    rewrite: function(ast) {
+        return this.visit(ast).asJS()
+            .replace("__#CALL)(", "legind._calls++,", "g");
+    }
+},
+'visiting', {
+    visitCall: function($super, node) {
+        return new lively.ast.Call(node.pos, new lively.ast.Variable(node.pos,"__#CALL"), [$super(node)]);
     }
 });
 

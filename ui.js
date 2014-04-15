@@ -327,14 +327,14 @@ for (var i = 1; i < 120; i++) {\n\
                 _BorderColor: Color.rgb(189,190,192),
                 _BorderRadius: 5,
                 _BorderWidth: 1,
-                _Extent: lively.pt(100.0,20.0),
-                _Position: lively.pt(410.9,0.0),
+                _Extent: lively.pt(120.0,20.0),
+                _Position: lively.pt(310.9,0.0),
                 _StyleClassNames: ["Morph","Button"],
                 className: "lively.morphic.Button",
                 droppingEnabled: false,
                 grabbingEnabled: false,
                 isPressed: false,
-                label: "Profile",
+                label: "Profile (time)",
                 name: "PButton",
                 sourceModule: "lively.morphic.Widgets",
                 toggle: false,
@@ -344,6 +344,42 @@ for (var i = 1; i < 120; i++) {\n\
                 },
                 doAction: function doAction() {
                     var profiler = new legind.instrumentation.Profiler();
+                    var src = this.get("PSource").textString;
+                    var results = profiler.rewriteAndProfile(src);
+                    var resultsPane = lively.BuildSpec('legind.ui.ProfileResult').createMorph();
+                    resultsPane.setResults(results);
+                    var container = this.get("Profiler").submorphs[1];
+                    var tab = container.addTabLabeled("Profiling Results");
+                    tab.setBorderWidth(0);
+                    tab.setExtent(tab.getExtent().withX(145));
+                    container.activateTab(tab);
+                    var pane = tab.getPane();
+                    pane.setBorderWidth(0);
+                    pane.setClipMode({x:"hidden",y:"auto"});
+                    pane.setLayouter(new lively.morphic.Layout.VerticalScrollerLayout(pane));
+                    pane.addMorph(resultsPane);
+                }
+            },{
+                _BorderColor: Color.rgb(189,190,192),
+                _BorderRadius: 5,
+                _BorderWidth: 1,
+                _Extent: lively.pt(120.0,20.0),
+                _Position: lively.pt(410.9,0.0),
+                _StyleClassNames: ["Morph","Button"],
+                className: "lively.morphic.Button",
+                droppingEnabled: false,
+                grabbingEnabled: false,
+                isPressed: false,
+                label: "Profile (instr)",
+                name: "PButton2",
+                sourceModule: "lively.morphic.Widgets",
+                toggle: false,
+                value: false,
+                connectionRebuilder: function connectionRebuilder() {
+                    lively.bindings.connect(this, "fire", this, "doAction", {});
+                },
+                doAction: function doAction() {
+                    var profiler = new legind.instrumentation.Profiler(true);
                     var src = this.get("PSource").textString;
                     var results = profiler.rewriteAndProfile(src);
                     var resultsPane = lively.BuildSpec('legind.ui.ProfileResult').createMorph();
@@ -435,7 +471,7 @@ lively.morphic.HtmlWrapperMorph.subclass('legind.ui.JQPlot',
             series: data[1],
             axes:{
                 xaxis: { label: 'Input size', pad: 0 },
-                yaxis: { label: 'Time in ms', pad: 0 }
+                yaxis: { pad: 0 }
             }
         });
     },
