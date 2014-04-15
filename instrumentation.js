@@ -143,7 +143,7 @@ Object.subclass('legind.instrumentation.Profiler',
     stopTimer: function() {
         var last = this.timers.pop();
         var time = Date.now() - last[0];
-        if (time > 0) {
+        if (time > 10) {
             this.record(last[1], time, last[2]);
         }
     },
