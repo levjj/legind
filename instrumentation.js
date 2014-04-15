@@ -146,7 +146,7 @@ Object.subclass('legind.instrumentation.Profiler',
                 fargs[i] = 0;
             }
         }
-        var y = this.instructions ? legind._calls : Date.now();
+        var y = this.instructions ? (legind._calls + legind._ops) : Date.now();
         this.timers.push([y, id, fargs]);
     },
     stopTimer: function() {
@@ -155,7 +155,7 @@ Object.subclass('legind.instrumentation.Profiler',
             var y = Date.now() - last[0];
             if (y < 10) return;
         } else {
-            var y = legind._calls - last[0];
+            var y = legind._calls + legind._ops - last[0];
         }
         this.record(last[1], y, last[2]);
     },
@@ -181,6 +181,7 @@ Object.subclass('legind.instrumentation.Profiler',
         legind.instrumentation.Profiler.current = this;
         if (this.instructions) {
             legind._calls = 0;
+            legind._ops = 0;
         }
         cb();
         return this.getReport();
@@ -199,6 +200,7 @@ Object.subclass('legind.instrumentation.Profiler',
         } else {
             var rewritten = rewrittenAST.asJS();
         }
+        console.log(rewritten);
         this.report = prewriter.templates.map(function(e) {
             return Object.extend({
                 inv: [],
@@ -283,12 +285,40 @@ lively.ast.Rewriting.Transformation.subclass('legind.instrumentation.Instruction
 'rewriting', {
     rewrite: function(ast) {
         return this.visit(ast).asJS()
-            .replace("__#CALL)(", "legind._calls++,", "g");
+            .replace("__#CALL)(", "legind._calls++,", "g")
+            .replace("__#OP)(", "legind._ops++,", "g");
     }
 },
 'visiting', {
     visitCall: function($super, node) {
         return new lively.ast.Call(node.pos, new lively.ast.Variable(node.pos,"__#CALL"), [$super(node)]);
+    },
+    visitSend: function($super, node) {
+        return new lively.ast.Call(node.pos, new lively.ast.Variable(node.pos,"__#CALL"), [$super(node)]);
+    },
+    visitBinaryOp: function($super, node) {
+        return new lively.ast.Call(node.pos, new lively.ast.Variable(node.pos,"__#OP"), [$super(node)]);
+    },
+    visitUnaryOp: function($super, node) {
+        return new lively.ast.Call(node.pos, new lively.ast.Variable(node.pos,"__#OP"), [$super(node)]);
+    },
+    visitSet: function($super, node) {
+        return new lively.ast.Call(node.pos, new lively.ast.Variable(node.pos,"__#OP"), [$super(node)]);
+    },
+    visitModifyingSet: function($super, node) {
+        return new lively.ast.Call(node.pos, new lively.ast.Variable(node.pos,"__#OP"), [$super(node)]);
+    },
+    visitObjPropertySet: function($super, node) {
+        return new lively.ast.Call(node.pos, new lively.ast.Variable(node.pos,"__#OP"), [$super(node)]);
+    },
+    visitObjPropertySet: function($super, node) {
+        return new lively.ast.Call(node.pos, new lively.ast.Variable(node.pos,"__#OP"), [$super(node)]);
+    },
+    visitPreOp: function($super, node) {
+        return new lively.ast.Call(node.pos, new lively.ast.Variable(node.pos,"__#OP"), [$super(node)]);
+    },
+    visitPostOp: function($super, node) {
+        return new lively.ast.Call(node.pos, new lively.ast.Variable(node.pos,"__#OP"), [$super(node)]);
     }
 });
 
