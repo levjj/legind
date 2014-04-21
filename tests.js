@@ -3,6 +3,7 @@ module('legind.tests').requires('legind.instrumentation','lively.TestFramework')
 TestCase.subclass('legind.tests.CTests',
 'running', {
     setUp: function() {
+        this.constant = new legind.instrumentation.CConstant(0);
         this.linear = new legind.instrumentation.CLinear(0);
         this.quadratic = new legind.instrumentation.CQuadratic(0);
     }
@@ -57,6 +58,16 @@ TestCase.subclass('legind.tests.CTests',
             this.quadratic.fit([i], i*i);
         }
         this.assert(this.quadratic.loss < this.linear.loss);
+    },
+    testConstant: function() {
+        for (var i = 1; i < 5; i++) {
+            this.constant.fit([1], 1);
+            this.linear.fit([1], 1);
+            this.quadratic.fit([1], 1);
+            this.assertEquals(0, this.constant.loss);
+            this.assertEquals(0, this.linear.loss);
+            this.assertEquals(0, this.quadratic.loss);
+        }
     }
 });
 
@@ -107,11 +118,12 @@ TestCase.subclass('legind.tests.ProfilingTests',
         this.assertEquals("lin", report[2].name, 'name does not match');
         this.assertEquals(20, report[2].inv.length, "expect twenty invocations");
         this.assert(report[2].cmodels, 'no complexity models');
-        var lin = report[2].cmodels[0];
+        var lin = report[2].cmodels[1];
         this.assert(lin instanceof legind.instrumentation.CLinear, 'no linear model');
-        var qua = report[2].cmodels[1];
+        var qua = report[2].cmodels[2];
         this.assert(qua instanceof legind.instrumentation.CQuadratic, 'no quadratic model');
         this.assert(lin.loss < qua.loss, 'linear model fits better');
+        this.assertEquals(0, lin.loss);
     },
     testQuadratic: function() {
         var src = function() {
@@ -133,9 +145,9 @@ TestCase.subclass('legind.tests.ProfilingTests',
         this.assertEquals("lin", report[2].name, 'name does not match');
         this.assertEquals(20, report[2].inv.length, "expect twenty invocations");
         this.assert(report[2].cmodels, 'no complexity models');
-        var lin = report[2].cmodels[0];
+        var lin = report[2].cmodels[1];
         this.assert(lin instanceof legind.instrumentation.CLinear, 'no linear model');
-        var qua = report[2].cmodels[1];
+        var qua = report[2].cmodels[2];
         this.assert(qua instanceof legind.instrumentation.CQuadratic, 'no quadratic model');
         this.assert(lin.loss > qua.loss, 'quadratic model fits better');
     }

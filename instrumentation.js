@@ -50,6 +50,17 @@ Object.subclass('legind.instrumentation.CModel',
     }
 });
 
+legind.instrumentation.CModel.subclass('legind.instrumentation.CConstant',
+'analysis', {
+    kernel: function(x) {
+        return 0;
+    }
+}, 'interface', {
+    name: function() {
+        return "O(1)";
+    }
+});
+
 legind.instrumentation.CModel.subclass('legind.instrumentation.CLinear',
 'analysis', {
     kernel: function(x) {
@@ -223,6 +234,7 @@ Object.subclass('legind.instrumentation.Profiler',
                 total: 0,
                 cmodels: e.args.map(function(arg, idx) {
                     return [
+                        new legind.instrumentation.CConstant(idx),
                         new legind.instrumentation.CLinear(idx),
                         new legind.instrumentation.CQuadratic(idx),
                         new legind.instrumentation.CCubic(idx),
