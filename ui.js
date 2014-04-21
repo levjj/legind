@@ -1,5 +1,82 @@
 module('legind.ui').requires('legind.instrumentation','lively.morphic.Complete').requiresLib({url: Config.codeBase + 'legind/lib/jquery.jqplot.min.js',loadTest: function() { return !!jQuery.jqplot; }}).toRun(function() {
-    
+
+Object.subclass('legind.ui.ExampleSources', {
+    simple: function() {
+        function linear(n) {
+            var sum = 0;
+            for (var i = 1; i < n; i += 1) {
+                sum += Math.sqrt(i);
+            }
+            return sum;
+        }
+        
+        function quadratic(n) {
+            var sum = 0;
+            for (var i = 1; i < n; i += 1) {
+                for (var j = 1; j < i; j += 1) {
+                    sum += Math.sqrt(j);
+                }
+            }
+            return sum;
+        }
+        
+        for (var i = 1; i < 120; i++) {
+            linear(1000 * i);
+        }
+        for (var i = 1; i < 120; i++) {
+            quadratic(10 * i);
+        }
+    },
+    quicksort: function() {
+        function quicksort(arr) {
+            if (arr.length == 0) return arr;
+            var pivot = arr.pop();
+            var left = [];
+            var right = [];
+            for (var i = 0; i < arr.length; i++) {
+                if (arr[i] < pivot) {
+                    left.push(arr[i]);
+                } else {
+                    right.push(arr[i]);
+                }
+            }
+            var left = quicksort(left);
+            var right = quicksort(right);
+            return left.concat([pivot]).concat(right);
+        }
+        var n = 5000;
+        for (var i = 0; i < n; i += 40) {
+            var arr = [];
+            for (var j = 0; j < i; j++) {
+                arr.push(n.randomSmallerInteger());
+            }
+            quicksort(arr);
+        }
+    },
+    richards: function() {
+        var url = new URL(URL.codeBase + "legind/octane/richards.js")
+        // make a simple synchronous request and print the content:
+        var d = url.asWebResource().get().content;
+        return d + "\n\nrunRichards();"
+    },
+    examples: function(txt) {
+        function src(fn) {
+            var src = fn.toString();
+            src = src.substring(14, src.length - 5);
+            src = src.split("\n").map(function(s) { return s.substring(8, s.length)}).join('\n');
+            return src;
+        }
+        var self = this;
+        var simpleExamples = ['simple', 'quicksort'].map(function(ex) {
+            return [ex, function() { txt.textString = src(self[ex]); }];
+        })
+        var remoteExamples = ['richards'].map(function(ex) {
+            return [ex, function() { txt.textString = self[ex](); }];
+        })
+        return simpleExamples.concat(remoteExamples);
+    }
+});
+
 lively.BuildSpec('legind.ui.ProfileResult', {
     _Extent: lively.pt(510.9,565.0),
     _Position: lively.pt(535.9,10.0),
@@ -245,60 +322,17 @@ lively.BuildSpec('legind.ui.Profiler', {
             name: "PSource",
             sourceModule: "lively.morphic.TextCore",
             syntaxHighlightingWhileTyping: true,
-            textString2: "function quicksort(arr) {\n\
-    if (arr.length == 0) return arr;\n\
-    var pivot = arr.pop();\n\
-    var left = [];\n\
-    var right = [];\n\
-    for (var i = 0; i < arr.length; i++) {\n\
-        if (arr[i] < pivot) {\n\
-            left.push(arr[i]);\n\
-        } else {\n\
-            right.push(arr[i]);\n\
-        }\n\
-    }\n\
-    var left = quicksort(left);\n\
-    var right = quicksort(right);\n\
-    return left.concat([pivot]).concat(right);\n\
-}\n\n\
-var n = 5000;\n\
-for (var i = 0; i < n; i += 40) {\n\
-    var arr = [];\n\
-    for (var j = 0; j < i; j++) {\n\
-        arr.push(n.randomSmallerInteger());\n\
-    }\n\
-    quicksort(arr);\n\
-}\n",
-            textString: "function linear(n) {\n\
-    var sum = 0;\n\
-    for (var i = 1; i < n; i += 1) {\n\
-        sum += Math.sqrt(i);\n\
-    }\n\
-    return sum;\n\
-}\n\
-\n\
-function quadratic(n) {\n\
-    var sum = 0;\n\
-    for (var i = 1; i < n; i += 1) {\n\
-        for (var j = 1; j < i; j += 1) {\n\
-            sum += Math.sqrt(j);\n\
-        }\n\
-    }\n\
-    return sum;\n\
-}\n\
-\n\
-for (var i = 1; i < 120; i++) {\n\
-    linear(1000 * i);\n\
-}\n\
-for (var i = 1; i < 120; i++) {\n\
-    quadratic(10 * i);\n\
-}",
+            textString: "",
             onKeyDown: function onKeyDown(evt) {
                 var res = $super(evt);
                 var range = this.getSelectionRange();
                 var results = this.get("PResult");
                 if (results) results.update(range[0])
                 return res;
+            },
+            morphMenuItems: function() {
+                var ex = new legind.ui.ExampleSources();
+                return ex.examples(this);
             },
             connectionRebuilder: function connectionRebuilder() {
                 lively.bindings.connect(this, "textString", this, "highlightSyntaxDebounced", {});
