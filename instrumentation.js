@@ -51,9 +51,17 @@ Object.subclass('legind.instrumentation.CModel',
 
 legind.instrumentation.CModel.subclass('legind.instrumentation.CConstant',
 'analysis', {
-    kernel: function(x) {
-        return 0;
-    }
+    fit: function(args, y) {
+        if (this.argIdx >= args.length) return;
+        if (this.n > 1) {
+            this.loss += Math.abs(y - this.meanY);
+        }
+        this.n++;
+        this.meanY = this.meanY + (y - this.meanY) / this.n;
+    },
+    _predict: function(arg) {
+        return 0|this.meanY;
+    },
 }, 'interface', {
     name: function() {
         return "O(1)";
