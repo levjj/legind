@@ -9,7 +9,7 @@ Object.subclass('legind.ui.ExampleSources', {
             }
             return sum;
         }
-        
+
         function quadratic(n) {
             var sum = 0;
             for (var i = 1; i < n; i += 1) {
@@ -19,7 +19,7 @@ Object.subclass('legind.ui.ExampleSources', {
             }
             return sum;
         }
-        
+
         for (var i = 1; i < 120; i++) {
             linear(1000 * i);
         }
@@ -56,7 +56,8 @@ Object.subclass('legind.ui.ExampleSources', {
     richards: function() {
         var url = new URL(URL.codeBase + "legind/octane/richards.js")
         // make a simple synchronous request and print the content:
-        var d = url.asWebResource().get().content;
+        var d = "function Benchmark() {};\nfunction BenchmarkSuite() {};\n\n";
+        d += url.asWebResource().get().content;
         return d + "\n\nrunRichards();"
     },
     examples: function(txt) {
