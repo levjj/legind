@@ -13,10 +13,9 @@ Object.subclass('legind.instrumentation.CModel',
     }
 },
 'analysis', {
-    fit: function(args, time) {
+    fit: function(args, y) {
         if (this.argIdx >= args.length) return;
         var x = this.kernel(args[this.argIdx]);
-        var y = time;
         if (this.varX > 0) {
             var beta = this.covarXY / this.varX;
             var pred = 0|(this.meanY - beta* this.meanX + beta* x);
