@@ -318,7 +318,11 @@ lively.ast.Rewriting.Transformation.subclass('legind.instrumentation.Instruction
     }
 },
 'visiting', {
+    visitNew: function($super, node) {
+        return new lively.ast.Call(node.pos, new lively.ast.Variable(node.pos,"__#CALL"), [$super(node)]);
+    },
     visitCall: function($super, node) {
+        if (node._parent && node._parent.isNew) return $super(node)
         return new lively.ast.Call(node.pos, new lively.ast.Variable(node.pos,"__#CALL"), [$super(node)]);
     },
     visitSend: function($super, node) {
