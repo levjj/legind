@@ -45,8 +45,8 @@ Object.subclass('legind.instrumentation.CModel',
 },
 'interface', {
     describe: function() {
-        var log = this.loss / this.n;
-        return this.name() + ":  " + (0|log) + "\n";
+        var ploss = 0|(100 - 100 * this.loss / this.tloss);
+        return this.name() + ":  " + ploss + "% (" + this.loss + ")\n";
     }
 });
 
@@ -173,6 +173,22 @@ Object.subclass('legind.instrumentation.Profiler',
 },
 'reporting', {
     getReport: function() {
+        this.report.each(function(fn) {
+            fn.args.each(function(arg, idx) {
+                var tloss = 0;
+                fn.cmodels.each(function(cmodel) {
+                    if (cmodel.argIdx === idx) {
+                        cmodel.loss = 0|(cmodel.loss / cmodel.n);
+                        tloss += cmodel.loss;
+                    }
+                });
+                fn.cmodels.each(function(cmodel) {
+                    if (cmodel.argIdx === idx) {
+                        cmodel.tloss = tloss;
+                    }
+                });
+            });
+        });
         return this.report;
     }
 },
