@@ -29,12 +29,27 @@ TestCase.subclass('legind.tests.CTests',
     },
     testLinear1: function() {
         this.linear.fit([1], 2);
+        //this.assertEquals(0, this.linear.beta(), 'bb');
+        //this.assertEquals(2, this.linear.alpha(),'a');
+        //this.assertEquals(2, this.linear.predict([4]),'p');
+        this.assertEquals(0, this.linear.loss, 'll');
         this.linear.fit([2], 4);
+        this.assertEquals(2, this.linear.beta(),'b');
+        this.assertEquals(0, this.linear.alpha(), 'aa');
+        this.assertEquals(8, this.linear.predict([4]));
+        this.assertEquals(0, this.linear.loss,'l');
         this.linear.fit([3], 3);
-        this.assertEquals(2, this.linear.alpha());
         this.assertEquals(0.5, this.linear.beta());
+        this.assertEquals(2, this.linear.alpha());
         this.assertEquals(4, this.linear.predict([4]));
-        this.assert(this.linear.loss > 0);
+        this.assertEquals(3, this.linear.loss);
+        this.linear.fit([6], 5);
+        this.assertEquals(0.5, this.linear.beta(), 'dd');
+        this.assertEquals(2, this.linear.alpha());
+        this.assertEquals(5, this.linear.predict([7]));
+        this.assertEquals(3, this.linear.loss);
+        this.linear.fit([8], 0);
+        this.assertEquals(9, this.linear.loss);
     },
     testSimpleQuadratic: function() {
         this.quadratic.fit([1], 1);
