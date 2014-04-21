@@ -308,6 +308,7 @@ lively.BuildSpec('legind.ui.Profiler', {
             _Fill: Color.rgb(255,255,255),
             _FontFamily: "monospace",
             _Padding: lively.rect(5,5,0,0),
+            _ClipMode: "auto",
             className: "lively.morphic.Text",
             doNotSerialize: ["parseErrors"],
             droppingEnabled: false,
