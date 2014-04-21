@@ -244,14 +244,14 @@ lively.BuildSpec('legind.ui.ProfileResult', {
         this.clearResults();
         this.currentEntry = entry;
         this.highlightSource(entry.pos);
-        this.resultsText.textString = entry.name + " (" + entry.total + "ms)";
+        this.resultsText.textString = entry.name + " (" + entry.total + ")";
         this.showArgumentsTabs(entry);
         this.owner.applyLayout();
     },
     showFunctionMenu: function showFunctionMenu() {
         var that = this;
         var options = this.results.map(function(res) {
-            var label = res.name + " (" + res.total + "ms)";
+            var label = res.name + " (" + res.total + ")";
             var callback = function() { that.update(res.pos[1] - 1); };
             return [label, callback];
         });
