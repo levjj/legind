@@ -227,8 +227,8 @@ Object.subclass('legind.instrumentation.Profiler',
                         new legind.instrumentation.CQuadratic(idx),
                         new legind.instrumentation.CCubic(idx),
                         new legind.instrumentation.CLogarithmic(idx),
-                        new legind.instrumentation.CLinearithmic(idx),
-                        new legind.instrumentation.CExponential(idx)
+                        new legind.instrumentation.CLinearithmic(idx)
+                        //new legind.instrumentation.CExponential(idx)
                     ];
                 }).flatten()
             }, e);
