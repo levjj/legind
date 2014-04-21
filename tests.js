@@ -89,7 +89,7 @@ TestCase.subclass('legind.tests.CTests',
 TestCase.subclass('legind.tests.ProfilingTests',
 'running', {
     setUp: function() {
-        this.profiler = new legind.instrumentation.Profiler();
+        this.profiler = new legind.instrumentation.Profiler(true);
     }
 },
 'testing', {
