@@ -153,7 +153,7 @@ Object.subclass('legind.instrumentation.Profiler',
         var last = this.timers.pop();
         if (this.time) {
             var y = Date.now() - last[0];
-            if (y < 10) return;
+            if (y < 3) return;
         } else {
             var y = legind._calls + legind._ops - last[0];
         }
