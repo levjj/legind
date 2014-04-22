@@ -550,7 +550,7 @@ lively.BuildSpec('legind.ui.ValueFlow', {
         resizeHeight: true,
         resizeWidth: true,
         spacing: 15,
-        type: "lively.morphic.Layout.HorizontalLayout"
+        type: "lively.morphic.Layout.VerticalLayout"
     },
     name: "DataFlowDemo",
     sourceModule: "lively.morphic.Core",
