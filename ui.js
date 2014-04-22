@@ -535,4 +535,112 @@ lively.morphic.HtmlWrapperMorph.subclass('legind.ui.JQPlot',
     }
 });
 
+lively.BuildSpec('legind.ui.ValueFlow', {
+    _BorderColor: Color.rgb(95,94,95),
+    _BorderWidth: 1,
+    _Extent: lively.pt(949.4,538.0),
+    _Fill: Color.rgb(209,209,210),
+    _Position: lively.pt(36.0,70.0),
+    __layered_droppingEnabled__: true,
+    className: "lively.morphic.Box",
+    droppingEnabled: true,
+    layout: {
+        borderSize: 10,
+        extentWithoutPlaceholder: lively.pt(499.7,100.0),
+        resizeHeight: true,
+        resizeWidth: true,
+        spacing: 15,
+        type: "lively.morphic.Layout.HorizontalLayout"
+    },
+    name: "DataFlowDemo",
+    sourceModule: "lively.morphic.Core",
+    submorphs: [{
+        _Extent: lively.pt(457.2,518.0),
+        _Fill: Color.rgb(255,255,255),
+        _FontFamily: "Droid Sans Mono",
+        _FontSize: 14,
+        _MaxTextWidth: 120.695652,
+        _MinTextWidth: 120.695652,
+        _Padding: lively.rect(5,5,0,0),
+        _Position: lively.pt(10.0,10.0),
+        _ClipMode: "auto",
+        className: "lively.morphic.Text",
+        droppingEnabled: false,
+        emphasis: [[0,10,{
+            fontWeight: "normal",
+            italics: "normal"
+        }]],
+        fixedHeight: true,
+        fixedWidth: true,
+        grabbingEnabled: false,
+        layout: {
+            resizeHeight: true,
+            resizeWidth: true
+        },
+        name: "LSource",
+        sourceModule: "lively.morphic.TextCore",
+        textString: "var a = 2;",
+        onKeyUp: function onKeyUp() {
+        this.owner.updateExample(this.textString);
+    }
+    },{
+        _Extent: lively.pt(457.2,518.0),
+        _Fill: Color.rgb(255,255,255),
+        _FontFamily: "Droid Sans Mono",
+        _FontSize: 14,
+        _MaxTextWidth: 120.695652,
+        _MinTextWidth: 120.695652,
+        _Padding: lively.rect(5,5,0,0),
+        _Position: lively.pt(482.2,10.0),
+        _ClipMode: "auto",
+        className: "lively.morphic.Text",
+        droppingEnabled: false,
+        textString: "var a = 2;",
+        fixedHeight: true,
+        fixedWidth: true,
+        grabbingEnabled: false,
+        layout: {
+            resizeHeight: true,
+            resizeWidth: true
+        },
+        name: "LFlow",
+        sourceModule: "lively.morphic.TextCore"
+    }],
+    doNotSerialize: ['vars','tm'],
+    vars: null,
+    updateExample: function updateExample() {
+        clearTimeout(this.tm);
+        this.tm = setTimeout(this.updateExampleDebounced.bind(this), 100);
+    },
+    updateExampleDebounced: function updateExample() {
+        var src = this.submorphs[0].textString;
+        var extractor = new legind.instrumentation.ExtractVars();
+        this.vars = extractor.extract(src);
+        if (this.vars) {
+            this.setBorderColor(Color.green);
+        } else {
+            this.setBorderColor(Color.red);
+            return;
+        }
+        var flow = this.get("LFlow");
+        flow.textString = "";
+        var cur = 0;
+        for (var i = 0; i < src.length;) {
+            if (this.vars[cur] && i === this.vars[cur].pos) {
+                flow.appendRichText(this.vars[cur].name, {fontSize: 14, color: Color.red});
+                var str = this.vars[cur++].val;
+                while (this.vars[cur] && i === this.vars[cur].pos) {
+                    str += (this.vars[cur].mod ? "→" : ",") + this.vars[cur].val;
+                    cur++;
+                }
+                flow.appendRichText("(" + str + ") ", {fontSize: 10, color: Color.blue});
+                i += this.vars[cur - 1].name.length;
+            } else {
+                flow.appendRichText(src[i], {fontSize: 14, color: Color.black});
+                i++;
+            }
+        }
+    }
+});
+
 }) // end of module

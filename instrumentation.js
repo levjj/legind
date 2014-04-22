@@ -1,4 +1,97 @@
-module('legind.instrumentation').requires('lively.ast.Rewriting').toRun(function() {
+module('legind.instrumentation').requires('lively.ast.Rewriting','lively.ast.Interpreter').toRun(function() {
+
+lively.ast.InterpreterVisitor.subclass('legind.instrumentation.ExtractVars',
+'initializing', {
+    initialize: function($super) {
+        this.vars = [];
+        this.timeout = 10000;
+        $super();
+    }
+}, 'visiting', {
+    visit: function($super, node) {
+        if (this.timeout-- === 0) throw new Exception("timeout");
+        return $super(node);
+    },
+    visitVariable: function($super, node) {
+        var result = $super(node);
+        this.vars.push({name: node.name, pos: node.pos[0], val: result});
+        return result;
+    },
+    visitSet: function($super, node) {
+        if (node.left.isVariable) {
+            var oldR = this.currentFrame.lookup(node.left.name);
+        }
+        var result = $super(node);
+        if (!node.left.isVariable) return result;
+        this.vars.push({name: node.left.name, pos: node.pos[0], val: oldR});
+        this.vars.push({name: node.left.name, pos: node.pos[0], val: result, mod: true});
+        return result;
+    },
+    visitModifyingSet: function($super, node) {
+        var result = $super(node);
+        if (!node.left.isVariable) return result;
+        this.vars.push({name: node.left.name, pos: node.left.pos[0], val: result, mod: true});
+        return result
+    },
+    visitPostOp: function($super, node) {
+        var result = $super(node);
+        if (!node.expr.isVariable) return result;
+        var newR = this.currentFrame.lookup(node.expr.name);
+        this.vars.push({name: node.expr.name, pos: node.expr.pos[0], val: newR, mod: true});
+        return result;
+    },
+    visitPreOp: function($super, node) {
+        var result = $super(node);
+        if (!node.expr.isVariable) return result;
+        this.vars.push({name: node.expr.name, pos: node.expr.pos[0], val: result, mod: true});
+        return result;
+    },
+    visitVarDeclaration: function($super, node) {
+        var result = $super(node);
+        this.vars.push({name: node.name, pos: node.pos[0]+1, val: result});
+        return result;
+    }
+}, 'analyzing', {
+    extract: function(src) {
+        try {
+            var ast = lively.ast.Parser.parse(src);
+            this.run(ast);
+            this.vars = this.sort(this.vars);
+            return this.vars;
+        } catch (e) {
+            return undefined;
+        }
+    },
+    sort: function(arr) {
+        if (arr.length <= 1) return arr;
+        if (arr.length === 2) {
+            if (arr[0].pos <= arr[1].pos) {
+                return [arr[0],arr[1]];
+            } else {
+                return [arr[1],arr[0]];
+            }
+        }
+        var m = 0|(arr.length / 2);
+        var left = this.sort(arr.slice(0,m));
+        var right = this.sort(arr.slice(m,arr.length));
+        var i = 0; var j = 0;
+        var out = [];
+        while (i < left.length && j < right.length) {
+            if (left[i].pos <= right[j].pos) {
+                out.push(left[i++]);
+            } else {
+                out.push(right[j++]);
+            }
+        }
+        while (i < left.length) {
+            out.push(left[i++]);
+        }
+        while (j < right.length) {
+            out.push(right[j++]);
+        }
+        return out;
+    }
+});
 
 Object.subclass('legind.instrumentation.CModel',
 'initializing', {
@@ -265,8 +358,16 @@ lively.ast.Rewriting.Transformation.subclass('legind.instrumentation.ProfilingTr
 },
 'generating', {
     addFunction: function(node) {
+        var name = node.name();
+        if (name === undefined && node._parent.isSet) {
+            var left = node._parent.left;
+            if (left.isVariable) name = left.name;
+            if (left.isGetSlot) name = left.slotName;
+        } else if (name === undefined && node._parent.isVarDeclaration) {
+            name = node._parent.name;
+        }
         this.templates.push({
-            name: node.name(),
+            name: name,
             pos: node.pos,
             args: node.args.map(function(arg) { return arg.name; })
         });

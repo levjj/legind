@@ -168,4 +168,66 @@ TestCase.subclass('legind.tests.ProfilingTests',
     }
 });
 
+TestCase.subclass('legind.tests.VariableFlowTest',
+'running', {
+    setUp: function() {
+        this.extractor = new legind.instrumentation.ExtractVars();
+    }
+},
+'testing', {
+    testIf: function() {
+        var src = (function() {
+            var i = 1;
+            if (i < 2) {
+                var j = 2;
+            }
+        }).toString();
+        src = src.substring(14,src.length - 10);
+        this.assertMatches([{name: "i", pos: 16, val: 1},
+                            {name: "i", pos: 39, val: 1},
+                            {name: "j", pos: 68, val: 2}
+                            ],this.extractor.extract(src));
+    },
+    testWhile: function() {
+        var src = (function() {
+            var i = 1;
+            while (i < 2) {
+                i = 2;
+            }
+        }).toString();
+        src = src.substring(14,src.length - 10);
+        this.assertMatches([{name: "i", pos: 16, val: 1},
+                            {name: "i", pos: 42, val: 1},
+                            {name: "i", pos: 42, val: 2},
+                            {name: "i", pos: 67, val: 1},
+                            {name: "i", pos: 67, val: 2, mod: true}
+                            ], this.extractor.extract(src));
+    },
+    testFor: function() {
+        var src = (function() {
+            var sum = 0;
+            for (var i = 1; i < 3; i++) {
+                sum += i;
+            }
+        }).toString();
+        src = src.substring(14,src.length - 10);
+        this.assertMatches([{name: "sum", pos: 16, val: 0},
+                            {name: "i", pos: 46, val: 1},
+                            {name: "i", pos: 53, val: 1},
+                            {name: "i", pos: 53, val: 2},
+                            {name: "i", pos: 53, val: 3},
+                            {name: "i", pos: 60, val: 1},
+                            {name: "i", pos: 60, val: 2, mod: true},
+                            {name: "i", pos: 60, val: 2},
+                            {name: "i", pos: 60, val: 3, mod: true},
+                            {name: "sum", pos: 83, val: 0},
+                            {name: "sum", pos: 83, val: 1, mod: true},
+                            {name: "sum", pos: 83, val: 1},
+                            {name: "sum", pos: 83, val: 3, mod: true},
+                            {name: "i", pos: 90, val: 1},
+                            {name: "i", pos: 90, val: 2}
+                            ], this.extractor.extract(src));
+    }
+});
+
 }) // end of module
