@@ -53,6 +53,85 @@ Object.subclass('legind.ui.ExampleSources', {
             quicksort(arr);
         }
     },
+    algorithms: function() {
+        function quicksort(arr) {
+            if (arr.length < 2) return arr;
+            var pivot = arr.pop();
+            var left = [];
+            var right = [];
+            for (var i = 0; i < arr.length; i++) {
+                if (arr[i] < pivot) {
+                    left.push(arr[i]);
+                } else {
+                    right.push(arr[i]);
+                }
+            }
+            var left = quicksort(left);
+            var right = quicksort(right);
+            return left.concat([pivot]).concat(right);
+        }
+        function mergesort(arr) {
+            if (arr.length < 2) return arr;
+            var m = Math.ceil(arr.length / 2);
+            var res = [];
+            var left = mergesort(arr.slice(0,m));
+            var right = mergesort(arr.slice(m,arr.length));
+            var i = 0, j = 0;
+            while (i < left.length && j < right.length) {
+                if (left[i] < right[j]) {
+                    res.push(left[i++]);
+                } else {
+                    res.push(right[j++]);
+                }
+            }
+            while (i < left.length) res.push(left[i++]);
+            while (j < right.length) res.push(right[j++]);
+            return res;
+        }
+        function heapsort(arr) {
+            function swap(i,j) {
+                var t = arr[i];
+                arr[i] = arr[j];
+                arr[j] = t;
+            }
+            function siftUp(i) {
+                if (i === 0) return;
+                var p = 0|((i-1)/2);
+                if (arr[i] > arr[p]) {
+                    swap(i,p);
+                    siftUp(p);
+                }
+            }
+            function siftDown(i,n) {
+                var c2 = 2*(i+1), c1 = c2 - 1;
+                if (c1 >= n) return;
+                var m = (c2 == n) || (arr[c1] > arr[c2]);
+                if (m && arr[c1] > arr[i]) {
+                    swap(i,c1);
+                    siftDown(c1,n);
+                } else if (c2 < n && arr[c2] > arr[i]) {
+                    swap(i,c2);
+                    siftDown(c2,n);
+                }
+            }
+            for (var i = 0; i < arr.length; i++) siftUp(i);
+            for (var i = arr.length - 1; i >= 0; i--) {
+                swap(0,i);
+                siftDown(0,i);
+            }
+            return arr;
+        }
+        var n = 1025;
+        for (var i = 1; i < n; i *= 2) {
+            var arr = [];
+            for (var j = 0; j < i; j++) {
+                arr.push(n.randomSmallerInteger());
+            }
+            quicksort(arr);
+            mergesort(arr);
+            heapsort(arr);
+        }
+    },
     richards: function() {
         var url = new URL(URL.codeBase + "legind/octane/richards.js")
         // make a simple synchronous request and print the content:
@@ -68,7 +147,7 @@ Object.subclass('legind.ui.ExampleSources', {
             return src;
         }
         var self = this;
-        var simpleExamples = ['simple', 'quicksort'].map(function(ex) {
+        var simpleExamples = ['simple', 'quicksort','algorithms'].map(function(ex) {
             return [ex, function() { txt.textString = src(self[ex]); }];
         })
         var remoteExamples = ['richards'].map(function(ex) {
@@ -265,10 +344,8 @@ lively.BuildSpec('legind.ui.ProfileResult', {
             if (entry.pos[0] < pos) {
                 if (pos < entry.pos[1]) {
                     this.showEntry(entry);
-                } else {
-                    this.clearResults();
+                    return;
                 }
-                return;
             }
         }
         this.clearResults()
@@ -379,7 +456,7 @@ lively.BuildSpec('legind.ui.Profiler', {
                     lively.bindings.connect(this, "fire", this, "doAction", {});
                 },
                 doAction: function doAction() {
-                    var profiler = new legind.instrumentation.Profiler();
+                    var profiler = new legind.instrumentation.TimeProfiler();
                     var src = this.get("PSource").textString;
                     var results = profiler.rewriteAndProfile(src);
                     var resultsPane = lively.BuildSpec('legind.ui.ProfileResult').createMorph();
@@ -415,7 +492,7 @@ lively.BuildSpec('legind.ui.Profiler', {
                     lively.bindings.connect(this, "fire", this, "doAction", {});
                 },
                 doAction: function doAction() {
-                    var profiler = new legind.instrumentation.Profiler(true);
+                    var profiler = new legind.instrumentation.InstructionProfiler();
                     var src = this.get("PSource").textString;
                     var results = profiler.rewriteAndProfile(src);
                     var resultsPane = lively.BuildSpec('legind.ui.ProfileResult').createMorph();
@@ -487,7 +564,7 @@ lively.morphic.HtmlWrapperMorph.subclass('legind.ui.JQPlot',
         this.cmodels.each(function(model) {
             var modelData = [];
             for (var i = 0; i < this.maxX; i += this.maxX / 30) {
-                var y = model._predict(i);
+                var y = model.predict(i);
                 if (y >= 0 && y < this.maxY) modelData.push([i, y]);
             }
             data.push(modelData);
@@ -518,7 +595,7 @@ lively.morphic.HtmlWrapperMorph.subclass('legind.ui.JQPlot',
         for (var i = 0; i < entry.inv.length; i++) {
             var e = entry.inv[i];
             var x = e.args[idx];
-            var y = e.time;
+            var y = e.y;
             if (x > this.maxX) this.maxX = x;
             if (y > this.maxY) this.maxY = y;
             this.data.push([x, y]);

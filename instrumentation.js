@@ -98,6 +98,7 @@ Object.subclass('legind.instrumentation.CModel',
     initialize: function(argIdx) {
         this.argIdx = argIdx;
         this.n = 0;
+        this.m = 0;
         this.meanX = 0;
         this.meanY = 0;
         this.varX = 0;
@@ -106,14 +107,21 @@ Object.subclass('legind.instrumentation.CModel',
     }
 },
 'analysis', {
-    fit: function(args, y) {
+    alpha: function() {
+        return this.meanY - this.meanX * this.beta();
+    },
+    beta: function() {
+        return this.covarXY / this.varX;
+    },
+    predict: function(arg) {
+        return 0|(this.alpha() + this.beta() * this.kernel(arg));
+    },
+    predictArgs: function(args) {
+        return this.predict(args[this.argIdx]);
+    },
+    train: function(args, y) {
         if (this.argIdx >= args.length) return;
         var x = this.kernel(args[this.argIdx]);
-        if (this.varX > 0) {
-            var beta = this.covarXY / this.varX;
-            var pred = 0|(this.meanY - beta* this.meanX + beta* x);
-            this.loss += Math.abs(y - pred) // * Math.max(0, (this.n - 1);
-        }
         this.n++;
         var meanX1 = this.meanX + (x - this.meanX) / this.n;
         var meanY1 = this.meanY + (y - this.meanY) / this.n;
@@ -122,42 +130,43 @@ Object.subclass('legind.instrumentation.CModel',
         this.meanX = meanX1;
         this.meanY = meanY1;
     },
-    alpha: function() {
-        return this.meanY - this.meanX * this.beta();
+    test: function(args, y) {
+        if (this.argIdx >= args.length) return;
+        this.m++;
+        var pred = this.predictArgs(args);
+        this.loss += (y - pred) * (y - pred);
     },
-    beta: function() {
-        return this.covarXY / this.varX;
-    },
-    _predict: function(arg) {
-        return 0|(this.alpha() + this.beta() * this.kernel(arg));
-    },
-    predict: function(args) {
-        return this._predict(args[this.argIdx]);
+    rms: function() {
+        return Math.sqrt(this.loss / this.m);
     }
 },
 'interface', {
     describe: function() {
-        var ploss = 0|(100 - 100 * this.loss / this.tloss);
-        return this.name() + ":  " + ploss + "% (" + this.loss + ")\n";
+        if (this.closs === 0) return this.name() + ":  (-)\n";
+        var ploss = 0|(100 * Math.exp(-Math.sqrt(this.loss / this.closs)));
+        return this.name() + ":  " + ploss + "% (" + this.rms().toFixed(2) + ")\n";
     }
 });
 
 legind.instrumentation.CModel.subclass('legind.instrumentation.CConstant',
 'analysis', {
-    fit: function(args, y) {
+    train: function(args, y) {
         if (this.argIdx >= args.length) return;
-        if (this.n > 1) {
-            this.loss += Math.abs(y - this.meanY);
-        }
         this.n++;
         this.meanY = this.meanY + (y - this.meanY) / this.n;
     },
-    _predict: function(arg) {
+    predict: function(arg) {
         return 0|this.meanY;
     },
-}, 'interface', {
+},
+'interface', {
     name: function() {
         return "O(1)";
+    },
+    describe: function() {
+        if (this.closs === 0) this.closs = 1;
+        var ploss = 0|(100 * Math.exp(-Math.sqrt(this.loss / this.closs)));
+        return this.name() + ":  " + ploss + "% (" + this.rms().toFixed(2) + ")\n";
     }
 });
 
@@ -166,7 +175,8 @@ legind.instrumentation.CModel.subclass('legind.instrumentation.CLinear',
     kernel: function(x) {
         return x;
     }
-}, 'interface', {
+},
+'interface', {
     name: function() {
         return "O(n)";
     }
@@ -177,7 +187,8 @@ legind.instrumentation.CModel.subclass('legind.instrumentation.CQuadratic',
     kernel: function(x) {
         return x * x;
     }
-}, 'interface', {
+},
+'interface', {
     name: function() {
         return "O(n²)";
     }
@@ -188,7 +199,8 @@ legind.instrumentation.CModel.subclass('legind.instrumentation.CCubic',
     kernel: function(x) {
         return x * x * x;
     }
-}, 'interface', {
+},
+'interface', {
     name: function() {
         return "O(n³)";
     }
@@ -196,10 +208,12 @@ legind.instrumentation.CModel.subclass('legind.instrumentation.CCubic',
 
 legind.instrumentation.CModel.subclass('legind.instrumentation.CLogarithmic',
 'analysis', {
+    log2: Math.log(2),
     kernel: function(x) {
-        return Math.log(x);
+        return Math.log(x+1) / this.log2;
     }
-}, 'interface', {
+},
+'interface', {
     name: function() {
         return "O(log n)";
     }
@@ -207,10 +221,12 @@ legind.instrumentation.CModel.subclass('legind.instrumentation.CLogarithmic',
 
 legind.instrumentation.CModel.subclass('legind.instrumentation.CLinearithmic',
 'analysis', {
+    log2: Math.log(2),
     kernel: function(x) {
-        return x * Math.log(x);
+        return x * (Math.log(x+1) / this.log2);
     }
-}, 'interface', {
+},
+'interface', {
     name: function() {
         return "O(n log n)";
     }
@@ -221,7 +237,8 @@ legind.instrumentation.CModel.subclass('legind.instrumentation.CExponential',
     kernel: function(x) {
         return Math.pow(2,x);
     }
-}, 'interface', {
+},
+'interface', {
     name: function() {
         return "O(2ⁿ)";
     }
@@ -229,17 +246,13 @@ legind.instrumentation.CModel.subclass('legind.instrumentation.CExponential',
 
 Object.subclass('legind.instrumentation.Profiler',
 'initializing', {
-    initialize: function(instructions) {
-        this.timers = [];
-        if (instructions) {
-            this.instructions = true;
-        } else {
-            this.time = true;
-        }
+    initialize: function() {
+        this.stack = [];
+        this.testing = false;
     }
 },
 'profiling', {
-    startTimer: function(id, args) {
+    enter: function(id, args) {
         var nargs = args.length;
         var fargs = new Array(nargs);
         for (var i = 0; i < nargs; i++) {
@@ -257,28 +270,28 @@ Object.subclass('legind.instrumentation.Profiler',
                 fargs[i] = 0;
             }
         }
-        var y = this.instructions ? (legind._calls + legind._ops) : Date.now();
-        this.timers.push([y, id, fargs]);
+        this.stack.push([this.current(), id, fargs]);
     },
-    stopTimer: function() {
-        var last = this.timers.pop();
-        if (this.time) {
-            var y = Date.now() - last[0];
-            if (y < 3) return;
-        } else {
-            var y = legind._calls + legind._ops - last[0];
-        }
+    exit: function() {
+        var last = this.stack.pop();
+        var y = this.current() - last[0];
         this.record(last[1], y, last[2]);
     },
-    record: function(id, time, args) {
+    record: function(id, y, args) {
         var report = this.report[id];
-        report.total += time;
+        report.total += y;
         var nmodels = report.cmodels.length;
-        for (var i = 0; i < nmodels; i++) {
-            report.cmodels[i].fit(args, time);
-        }
-        if (report.inv.length <= 120) {
-            report.inv.push({args: args, time: time});
+        if (!!this.testing) {
+            for (var i = 0; i < nmodels; i++) {
+                report.cmodels[i].test(args, y);
+            }
+        } else {
+            for (var i = 0; i < nmodels; i++) {
+                report.cmodels[i].train(args, y);
+            }
+            if (report.inv.length <= 120) {
+                report.inv.push({args: args, y: y});
+            }
         }
     },
 },
@@ -286,66 +299,107 @@ Object.subclass('legind.instrumentation.Profiler',
     getReport: function() {
         this.report.each(function(fn) {
             fn.args.each(function(arg, idx) {
-                var tloss = 0;
+                var closs = 0;
                 fn.cmodels.each(function(cmodel) {
-                    if (cmodel.argIdx === idx) {
-                        cmodel.loss = 0|(cmodel.loss / cmodel.n);
-                        tloss += cmodel.loss;
+                    if (cmodel.argIdx === idx && cmodel instanceof legind.instrumentation.CConstant) {
+                        closs = cmodel.loss;
                     }
                 });
                 fn.cmodels.each(function(cmodel) {
                     if (cmodel.argIdx === idx) {
-                        cmodel.tloss = tloss;
+                        cmodel.closs = closs;
                     }
                 });
             });
         });
-        return this.report;
+        return window.rreport = this.report;
     }
 },
 'running', {
     profile: function(cb) {
         legind.instrumentation.Profiler.current = this;
-        if (this.instructions) {
-            legind._calls = 0;
-            legind._ops = 0;
-        }
         cb();
-        return this.getReport();
     },
-    rewriteAndProfile: function(src) {
+    rewrite: function(src) {
         var ast = lively.ast.Parser.parse(src, 'topLevel');
         if (!ast.isFunction) {
             ast = new lively.ast.Function([0,0], ast, []);
         }
         ast = new lively.ast.Call([0,0], ast, [])
         var prewriter = new legind.instrumentation.ProfilingTransformation();
-        var rewrittenAST = prewriter.visit(ast);
-        if (this.instructions) {
-            var irewriter = new legind.instrumentation.InstructionCountingTransformation();
-            var rewritten = irewriter.rewrite(rewrittenAST);
-        } else {
-            var rewritten = rewrittenAST.asJS();
-        }
-        console.log(rewritten);
-        this.report = prewriter.templates.map(function(e) {
+        return [prewriter.visit(ast),prewriter.templates];
+    },
+    modelsForIdx: function(idx) {
+        return [
+            new legind.instrumentation.CConstant(idx),
+            new legind.instrumentation.CLinear(idx),
+            new legind.instrumentation.CQuadratic(idx),
+            new legind.instrumentation.CCubic(idx),
+            new legind.instrumentation.CLogarithmic(idx),
+            new legind.instrumentation.CLinearithmic(idx),
+            new legind.instrumentation.CExponential(idx)
+        ];
+    },
+    rewriteAndProfile: function(src) {
+        var res = this.rewrite(src),
+            rewritten = res[0],
+            templates = res[1];
+        this.report = templates.map(function(e) {
             return Object.extend({
                 inv: [],
                 total: 0,
                 cmodels: e.args.map(function(arg, idx) {
-                    return [
-                        new legind.instrumentation.CConstant(idx),
-                        new legind.instrumentation.CLinear(idx),
-                        new legind.instrumentation.CQuadratic(idx),
-                        new legind.instrumentation.CCubic(idx),
-                        new legind.instrumentation.CLogarithmic(idx),
-                        new legind.instrumentation.CLinearithmic(idx)
-                        //new legind.instrumentation.CExponential(idx)
-                    ];
-                }).flatten()
+                    return this.modelsForIdx(idx);
+                }, this).flatten()
             }, e);
-        });
-        return this.profile(eval.bind(null,rewritten));
+        }, this);
+        console.log(rewritten);
+        var cb = eval.bind(null,rewritten);
+        this.profile(cb);
+        this.testing = true;
+        this.profile(cb);
+        return this.getReport();
+    }
+});
+
+legind.instrumentation.Profiler.subclass('legind.instrumentation.InstructionProfiler',
+'profiling', {
+    current: function(id, args) {
+        return legind._calls + legind._ops;
+    }
+},
+'running', {
+    profile: function($super, cb) {
+        legind._calls = 0;
+        legind._ops = 0;
+        return $super(cb);
+    },
+    rewrite: function($super, src) {
+        var res = $super(src),
+            rewritten = res[0],
+            templates = res[1];
+        var irewriter = new legind.instrumentation.InstructionTransformation();
+        return [irewriter.rewrite(rewritten),templates];
+    }
+});
+
+legind.instrumentation.Profiler.subclass('legind.instrumentation.TimeProfiler',
+'profiling', {
+    current: function() {
+        return Date.now();
+    },
+    record: function($super, id, time, args) {
+        if (time >= 3) {
+            $super(id, time, args);
+        }
+    }
+},
+'running', {
+    rewrite: function($super, src) {
+        var res = $super(src),
+            rewritten = res[0],
+            templates = res[1];
+        return [rewritten.asJS(),templates];
     }
 });
 
@@ -388,16 +442,16 @@ lively.ast.Rewriting.Transformation.subclass('legind.instrumentation.ProfilingTr
         return new lively.ast.ArrayLiteral([0,0], elements);
     },
     enterFunction: function(pos, args) {
-        // legind.instrumentation.Profiler.current.startTimer(id, args);
+        // legind.instrumentation.Profiler.current.enter(id, args);
         return new lively.ast.Send(pos,
-            new lively.ast.String(pos,"startTimer"),
+            new lively.ast.String(pos,"enter"),
             this.currentProfiler(pos),
             [new lively.ast.Number(pos, this.templates.length-1), this.captureArgs(args)]);
     },
     exitFunction: function(pos) {
-        // legind.instrumentation.Profiler.current.stopTimer();
+        // legind.instrumentation.Profiler.current.exit();
         return new lively.ast.Send(pos,
-            new lively.ast.String(pos,"stopTimer"),
+            new lively.ast.String(pos,"exit"),
             this.currentProfiler(pos),
             []);
     }
@@ -417,12 +471,12 @@ lively.ast.Rewriting.Transformation.subclass('legind.instrumentation.ProfilingTr
     }
 });
 
-lively.ast.Rewriting.Transformation.subclass('legind.instrumentation.InstructionCountingTransformation',
+lively.ast.Rewriting.Transformation.subclass('legind.instrumentation.InstructionTransformation',
 'rewriting', {
     rewrite: function(ast) {
         return this.visit(ast).asJS()
-            .replace("__#CALL)(", "legind._calls++,", "g")
-            .replace("__#OP)(", "legind._ops++,", "g");
+            .replace(/__#CALL\)\(/g, "legind._calls++,")
+            .replace(/__#OP\)\(/g, "legind._ops++,");
     }
 },
 'visiting', {

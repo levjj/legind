@@ -6,55 +6,41 @@ TestCase.subclass('legind.tests.CTests',
         this.constant = new legind.instrumentation.CConstant(0);
         this.linear = new legind.instrumentation.CLinear(0);
         this.quadratic = new legind.instrumentation.CQuadratic(0);
+        this.logarithmic = new legind.instrumentation.CLogarithmic(0);
+        this.linearithmic = new legind.instrumentation.CLinearithmic(0);
     }
 },
 'testing', {
-    testConstant: function() {
-        this.linear.fit([1], 1);
-        this.linear.fit([2], 1);
-        this.assertEquals(1, this.linear.alpha());
-        this.assertEquals(0, this.linear.beta());
-        this.assertEquals(1, this.linear.predict([3]));
-        this.assertEquals(1, this.linear.predict([4]));
-        this.assertEquals(0, this.linear.loss);
-    },
     testSimpleLinear: function() {
-        this.linear.fit([1], 1);
-        this.linear.fit([2], 2);
+        this.linear.train([1], 1);
+        this.linear.train([2], 2);
         this.assertEquals(0, this.linear.alpha());
         this.assertEquals(1, this.linear.beta());
         this.assertEquals(3, this.linear.predict([3]));
         this.assertEquals(4, this.linear.predict([4]));
-        this.assertEquals(0, this.linear.loss);
     },
     testLinear1: function() {
-        this.linear.fit([1], 2);
+        this.linear.train([1], 2);
         //this.assertEquals(0, this.linear.beta(), 'bb');
         //this.assertEquals(2, this.linear.alpha(),'a');
         //this.assertEquals(2, this.linear.predict([4]),'p');
-        this.assertEquals(0, this.linear.loss, 'll');
-        this.linear.fit([2], 4);
+        this.linear.train([2], 4);
         this.assertEquals(2, this.linear.beta(),'b');
         this.assertEquals(0, this.linear.alpha(), 'aa');
         this.assertEquals(8, this.linear.predict([4]));
-        this.assertEquals(0, this.linear.loss,'l');
-        this.linear.fit([3], 3);
+        this.linear.train([3], 3);
         this.assertEquals(0.5, this.linear.beta());
         this.assertEquals(2, this.linear.alpha());
         this.assertEquals(4, this.linear.predict([4]));
-        this.assertEquals(3, this.linear.loss);
-        this.linear.fit([6], 5);
+        this.linear.train([6], 5);
         this.assertEquals(0.5, this.linear.beta(), 'dd');
         this.assertEquals(2, this.linear.alpha());
         this.assertEquals(5, this.linear.predict([7]));
-        this.assertEquals(3, this.linear.loss);
-        this.linear.fit([8], 0);
-        this.assertEquals(9, this.linear.loss);
     },
     testSimpleQuadratic: function() {
-        this.quadratic.fit([1], 1);
-        this.quadratic.fit([2], 4);
-        this.quadratic.fit([3], 9);
+        this.quadratic.train([1], 1);
+        this.quadratic.train([2], 4);
+        this.quadratic.train([3], 9);
         this.assertEquals(0, this.quadratic.alpha(), 'gt1');
         this.assertEquals(1, this.quadratic.beta(), 'gt2');
         this.assertEquals(16, this.quadratic.predict([4]), 'gt3');
@@ -62,34 +48,75 @@ TestCase.subclass('legind.tests.CTests',
     },
     testLinearCompare: function() {
         for (var i = 1; i < 20; i++) {
-            this.linear.fit([i], i);
-            this.quadratic.fit([i], i);
+            this.linear.train([i], i);
+            this.quadratic.train([i], i);
         }
+        for (var i = 1; i < 20; i++) {
+            this.linear.test([i], i);
+            this.quadratic.test([i], i);
+        }
+        this.assertEquals(0, this.linear.loss);
         this.assert(this.linear.loss < this.quadratic.loss);
     },
     testQuadraticCompare: function() {
         for (var i = 1; i < 20; i++) {
-            this.linear.fit([i], i*i);
-            this.quadratic.fit([i], i*i);
+            this.linear.train([i], i*i);
+            this.quadratic.train([i], i*i);
         }
+        for (var i = 1; i < 20; i++) {
+            this.linear.test([i], i*i);
+            this.quadratic.test([i], i*i);
+        }
+        this.assertEquals(0, this.quadratic.loss);
         this.assert(this.quadratic.loss < this.linear.loss);
     },
     testConstant: function() {
         for (var i = 1; i < 5; i++) {
-            this.constant.fit([1], 1);
-            this.linear.fit([1], 1);
-            this.quadratic.fit([1], 1);
-            this.assertEquals(0, this.constant.loss);
-            this.assertEquals(0, this.linear.loss);
-            this.assertEquals(0, this.quadratic.loss);
+            this.constant.train([i], 1);
+            this.linear.train([i], 1);
+            this.quadratic.train([i], 1);
         }
+        for (var i = 1; i < 5; i++) {
+            this.constant.test([i], 1);
+            this.linear.test([i], 1);
+            this.quadratic.test([i], 1);
+        }
+        this.assertEquals(0, this.constant.loss);
+        this.assertEquals(0, this.linear.loss);
+        this.assertEquals(0, this.quadratic.loss);
+    },
+    testLogarithmic: function() {
+        for (var i = 1; i < 10; i++) {
+            this.linear.train([1 << i], i);
+            this.logarithmic.train([1 << i], i);
+        }
+        for (var i = 1; i < 10; i++) {
+            this.linear.test([1 << i], i);
+            this.logarithmic.test([1 << i], i);
+        }
+        this.assertEquals(0, this.logarithmic.loss);
+        this.assert(this.linear.loss > this.logarithmic.loss);
+    },
+    testLinearithmic: function() {
+        for (var i = 1; i < 10; i++) {
+            this.linear.train([1 << i], i * (1 << i));
+            this.linearithmic.train([1 << i], i * (1 << i));
+        }
+        this.assertEquals(0, this.linearithmic.alpha());
+        this.assertEquals(1, this.linearithmic.beta());
+        for (var i = 1; i < 10; i++) {
+            this.linear.test([1 << i], i * (1 << i));
+            this.linearithmic.test([1 << i], i * (1 << i));
+        }
+        this.assertEquals(0, this.linearithmic.loss);
+        this.assert(this.linear.loss > this.linearithmic.loss);
     }
 });
 
 TestCase.subclass('legind.tests.ProfilingTests',
 'running', {
     setUp: function() {
-        this.profiler = new legind.instrumentation.Profiler(true);
+        this.profiler = new legind.instrumentation.InstructionProfiler();
     }
 },
 'testing', {
