@@ -121,15 +121,70 @@ Object.subclass('legind.ui.ExampleSources', {
             }
             return arr;
         }
+        function bubblesort(arr) {
+            var done = false;
+            while (!done) {
+                done = true;
+                for (var i = 0; i < arr.length - 1; i++) {
+                    if (arr[i] > arr[i+1]) {
+                        var t =  arr[i];
+                        arr[i] = arr[i+1];
+                        arr[i+1] = t;
+                        done = false;
+                    }
+                }
+            }
+            return arr;
+        }
+        function insertionsort(arr) {
+            for (var i = 1; i < arr.length; i++) {
+                var x = arr[i];
+                for (var j = i; j > 0 && arr[j-1] > x;j--) {
+                    arr[j] = arr[j-1];
+                }
+                arr[j] = x;
+            }
+            return arr;
+        }
+        function selectionsort(arr) {
+            for (var i = 0; i < arr.length-1; i++) {
+                var min = i;
+                for (var j = i+1; j < arr.length; j++) {
+                    if (arr[j] < arr[min]) {
+                        min = j;
+                    }
+                }
+                var t = arr[i];
+                arr[i] = arr[min];
+                arr[min] = t;
+            }
+            return arr;
+        }
+        function binarySearch(arr, i) {
+            if (arr.length == 0) return;
+            var m = 0|(arr.length/2);
+            if (arr[m] === i) return i;
+            if (arr.length == 1) return;
+            if (arr[m] < i) {
+                return binarySearch(arr.slice(m, arr.length), i);
+            } else {
+                return binarySearch(arr.slice(0, m), i);
+            }
+        }
         var n = 1025;
         for (var i = 1; i < n; i *= 2) {
             var arr = [];
             for (var j = 0; j < i; j++) {
                 arr.push(n.randomSmallerInteger());
             }
+            var arr2 = JSON.stringify(arr);
             quicksort(arr);
             mergesort(arr);
             heapsort(arr);
+            binarySearch(arr, 0, n, n.randomSmallerInteger());
+            bubblesort(JSON.parse(arr2));
+            insertionsort(JSON.parse(arr2));
+            selectionsort(JSON.parse(arr2));
         }
     },
     richards: function() {

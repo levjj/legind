@@ -353,7 +353,6 @@ Object.subclass('legind.instrumentation.Profiler',
                 }, this).flatten()
             }, e);
         }, this);
-        console.log(rewritten);
         var cb = eval.bind(null,rewritten);
         this.profile(cb);
         this.testing = true;
