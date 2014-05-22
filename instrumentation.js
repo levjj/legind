@@ -310,6 +310,9 @@ Object.subclass('legind.instrumentation.Profiler',
                         cmodel.closs = closs;
                     }
                 });
+                fn.cmodels.sort(function(a,b) {
+                    return a.loss - b.loss;
+                });
             });
         });
         return window.rreport = this.report;
