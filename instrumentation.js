@@ -252,7 +252,10 @@ Object.subclass('legind.instrumentation.Profiler',
     }
 },
 'profiling', {
+    isEntering: false,
     enter: function(id, args) {
+        if (this.isEntering) return;
+        this.isEntering = true;
         var nargs = args.length;
         var fargs = new Array(nargs);
         for (var i = 0; i < nargs; i++) {
@@ -271,8 +274,10 @@ Object.subclass('legind.instrumentation.Profiler',
             }
         }
         this.stack.push([this.current(), id, fargs]);
+        this.isEntering = false;
     },
     exit: function() {
+        if (this.isEntering) return;
         var last = this.stack.pop();
         var y = this.current() - last[0];
         this.record(last[1], y, last[2]);
