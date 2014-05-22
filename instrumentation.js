@@ -324,7 +324,7 @@ Object.subclass('legind.instrumentation.Profiler',
                 });
             });
         });
-        return window.rreport = this.report;
+        return this.report;
     }
 },
 'running', {
