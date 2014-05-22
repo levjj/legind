@@ -259,7 +259,7 @@ Object.subclass('legind.instrumentation.Profiler',
             var a =  args[i];
             var t = typeof a;
             if (t === "number") {
-                fargs[i] = a;
+                fargs[i] = a >= 0 ? a : 0;
             } else if (t === "string") {
                 fargs[i] = a.length;
             } else if (a instanceof Array) {
