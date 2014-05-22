@@ -490,10 +490,12 @@ lively.ast.Rewriting.Transformation.subclass('legind.instrumentation.ProfilingTr
         } else if (name === undefined && node._parent.isVarDeclaration) {
             name = node._parent.name;
         }
+        var args = ["this"];
+        node.args.each(function(arg) { args.push(arg.name); });
         this.templates.push({
             name: name,
             pos: node.pos,
-            args: node.args.map(function(arg) { return arg.name; })
+            args: args
         });
     },
     currentProfiler: function(pos) {
@@ -506,6 +508,7 @@ lively.ast.Rewriting.Transformation.subclass('legind.instrumentation.ProfilingTr
     },
     captureArgs: function(args) {
         var elements = [];
+        elements.push(new lively.ast.This([0,0]));
         args.each(function(arg) {
             elements.push(new lively.ast.Variable([0,0], arg.name));
         });
