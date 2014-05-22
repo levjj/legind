@@ -141,10 +141,12 @@ Object.subclass('legind.instrumentation.CModel',
     }
 },
 'interface', {
+    r2: function() {
+        if (this.closs <= this.loss) return 0;
+        return (100 - 100 * (this.loss / this.closs)).toFixed(2);
+    },
     describe: function() {
-        if (this.closs === 0) return this.name() + ":  (-)\n";
-        var ploss = 0|(100 * Math.exp(-Math.sqrt(this.loss / this.closs)));
-        return this.name() + ":  " + ploss + "% (" + this.rms().toFixed(2) + ")\n";
+        return this.name() + ":  " + this.r2() + "% (" + this.rms().toFixed(2) + ")\n";
     }
 });
 
@@ -163,10 +165,8 @@ legind.instrumentation.CModel.subclass('legind.instrumentation.CConstant',
     name: function() {
         return "O(1)";
     },
-    describe: function() {
-        if (this.closs === 0) this.closs = 1;
-        var ploss = 0|(100 * Math.exp(-Math.sqrt(this.loss / this.closs)));
-        return this.name() + ":  " + ploss + "% (" + this.rms().toFixed(2) + ")\n";
+    r2: function() {
+        return this.loss === 0 ? 100 : 0;
     }
 });
 
