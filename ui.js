@@ -229,44 +229,83 @@ lively.BuildSpec('legind.ui.ProfileResult', {
     name: "PResult",
     resultsText: {
         isMorphRef: true,
-        path: "submorphs.0"
+        path: "submorphs.0.submorphs.0"
     },
     sourceModule: "lively.morphic.Core",
     submorphs: [{
-        _Extent: lively.pt(510.9,32.5),
-        _Fill: Color.rgb(255,255,255),
-        _FontFamily: "monospace",
-        _FontSize: 14,
-        _HandStyle: "default",
-        _InputAllowed: false,
-        _MaxTextWidth: 120.695652,
-        _MinTextWidth: 120.695652,
-        _Padding: lively.rect(5,5,0,0),
-        allowInput: false,
-        className: "lively.morphic.Text",
-        doNotSerialize: ["parseErrors"],
+        _Extent: lively.pt(510.9,565.0),
+        _Position: lively.pt(535.9,10.0),
+        className: "lively.morphic.Morph",
+        doNotSerialize: ["results"],
         droppingEnabled: false,
-        emphasis: [[0,0,{
-            fontWeight: "normal",
-            italics: "normal"
-        }]],
-        fixedHeight: true,
-        fixedWidth: true,
-        grabbingEnabled: false,
         layout: {
+            borderSize: 0,
             resizeHeight: false,
-            resizeWidth: true
+            resizeWidth: true,
+            spacing: 15,
+            type: "lively.morphic.Layout.TightHorizontalLayout"
         },
-        name: "PResultsText",
-        sourceModule: "lively.morphic.TextCore",
-        syntaxHighlightingWhileTyping: false,
-        onMouseUp: function onMouseUp(evt) {
-            if (evt.isLeftMouseButtonDown) {
-                this.owner.showFunctionMenu();
-            } else {
-                $super(evt);
+        name: "PResultsHeader",
+        sourceModule: "lively.morphic.Core",
+        submorphs: [{
+            _Extent: lively.pt(510.9,32.5),
+            _Fill: Color.rgb(255,255,255),
+            _FontFamily: "monospace",
+            _FontSize: 14,
+            _HandStyle: "default",
+            _InputAllowed: false,
+            _MaxTextWidth: 120.695652,
+            _MinTextWidth: 120.695652,
+            _Padding: lively.rect(5,5,0,0),
+            allowInput: false,
+            className: "lively.morphic.Text",
+            doNotSerialize: ["parseErrors"],
+            droppingEnabled: false,
+            emphasis: [[0,0,{
+                fontWeight: "normal",
+                italics: "normal"
+            }]],
+            fixedHeight: true,
+            fixedWidth: true,
+            grabbingEnabled: false,
+            layout: {
+                resizeHeight: false,
+                resizeWidth: true
+            },
+            name: "PResultsText",
+            sourceModule: "lively.morphic.TextCore",
+            syntaxHighlightingWhileTyping: false,
+            onMouseUp: function onMouseUp(evt) {
+                if (evt.isLeftMouseButtonDown) {
+                    this.owner.owner.showFunctionMenu();
+                } else {
+                    $super(evt);
+                }
             }
-        }
+        },{
+            _Extent: lively.pt(60.9,32.5),
+            _BorderColor: Color.rgb(189,190,192),
+            _BorderRadius: 5,
+            _BorderWidth: 1,
+            _Extent: lively.pt(120.0,20.0),
+            _Position: lively.pt(410.9,0.0),
+            _StyleClassNames: ["Morph","Button"],
+            className: "lively.morphic.Button",
+            droppingEnabled: false,
+            grabbingEnabled: false,
+            isPressed: false,
+            label: "next",
+            name: "PResultsNext",
+            sourceModule: "lively.morphic.Widgets",
+            toggle: false,
+            value: false,
+            connectionRebuilder: function connectionRebuilder() {
+                lively.bindings.connect(this, "fire", this, "doAction", {});
+            },
+            doAction: function doAction() {
+                this.owner.owner.showNextEntry();
+            }
+        }],
     }],
     clearResults: function clearResults() {
         this.currentEntry = null;
@@ -290,7 +329,7 @@ lively.BuildSpec('legind.ui.ProfileResult', {
         innerPane.layout = {resizeWidth: true, resizeHeight: false};
         innerPane.setBorderWidth(0);
         innerPane.disableGrabbing();
-        innerPane.setFill(null);
+        innerPane.setFill(Color.white);
         innerPane.setLayouter(new lively.morphic.Layout.HorizontalLayout(innerPane));
         pane.addMorph(innerPane);
         entry.cmodels.select(function(cmodel) {
@@ -337,11 +376,6 @@ lively.BuildSpec('legind.ui.ProfileResult', {
         this.results = results;
         this.clearResults();
     },
-    highlightSource: function highlightSource(pos) {
-        var highlight = {backgroundColor: Color.web.salmon.lighter(2)};
-        this.get("PSource").emphasizeAll({backgroundColor: null});
-        this.get("PSource").emphasize(highlight, pos[0], pos[1]);
-    },
     createSummaryTab: function createSummaryTab(container, entry) {
         var tab = container.addTabLabeled("Summary");
         tab.setBorderWidth(2);
@@ -352,7 +386,7 @@ lively.BuildSpec('legind.ui.ProfileResult', {
         var txt = new lively.morphic.Text(rect(0,0,100,100), "");
         txt.setFontSize(12);
         txt.layout = {resizeWidth: true};
-        txt.setFill(null);
+        txt.setFill(Color.white);
         txt.setBorderWidth(0);
         entry.args.each(function(arg,idx) {
             txt.appendRichText("\n" + arg + ":\n", {fontSize: 12,fontWeight: "bold"});
@@ -377,25 +411,33 @@ lively.BuildSpec('legind.ui.ProfileResult', {
         if (this.currentEntry == entry) return;
         this.clearResults();
         this.currentEntry = entry;
-        this.highlightSource(entry.pos);
+        if (entry.pos) {
+            this.get("PSource").highlightRange(entry.pos[0], entry.pos[1]);
+        }
         this.resultsText.textString = entry.name + " (" + entry.total + ")";
         this.showArgumentsTabs(entry);
         this.owner.applyLayout();
+    },
+    showNextEntry: function() {
+        var currentIdx = this.results.indexOf(this.currentEntry);
+        if (currentIdx < 0 || currentIdx === this.results.length - 1) return;
+        this.showEntry(this.results[currentIdx + 1]);
     },
     showFunctionMenu: function showFunctionMenu() {
         var that = this;
         var options = this.results.map(function(res) {
             var label = res.name + " (" + res.total + ")";
-            var callback = function() { that.update(res.pos[1] - 1); };
+            var callback = function() { that.showEntry(res); };
             return [label, callback];
         });
-        options.shift(); // remove first (wrapper) entry
+        //options.shift(); // remove first (wrapper) entry
         lively.morphic.Menu.openAtHand("Functions", options);
     },
     update: function update(pos) {
         if (!this.results) return this.clearResults();
         for (var j = this.results.length - 1; j != -1; j--) {
             var entry = this.results[j];
+            if (!entry.pos) return;
             if (entry.pos[0] < pos) {
                 if (pos < entry.pos[1]) {
                     this.showEntry(entry);
@@ -406,7 +448,7 @@ lively.BuildSpec('legind.ui.ProfileResult', {
         this.clearResults()
     }
 });
-    
+
 lively.BuildSpec('legind.ui.Profiler', {
     _BorderColor: Color.rgb(95,95,95),
     _Extent: lively.pt(960,600.0),
@@ -440,6 +482,7 @@ lively.BuildSpec('legind.ui.Profiler', {
             _Extent: lively.pt(510.9,539.8),
             _Fill: Color.rgb(255,255,255),
             _FontFamily: "monospace",
+            _FontSize: 9,
             _Padding: lively.rect(5,5,0,0),
             _ClipMode: "auto",
             className: "lively.morphic.Text",
@@ -455,7 +498,7 @@ lively.BuildSpec('legind.ui.Profiler', {
             },
             name: "PSource",
             sourceModule: "lively.morphic.TextCore",
-            syntaxHighlightingWhileTyping: true,
+            syntaxHighlightingWhileTyping: false,
             textString: "",
             onKeyDown: function onKeyDown(evt) {
                 var res = $super(evt);
@@ -468,8 +511,17 @@ lively.BuildSpec('legind.ui.Profiler', {
                 var ex = new legind.ui.ExampleSources();
                 return ex.examples(this);
             },
-            connectionRebuilder: function connectionRebuilder() {
-                lively.bindings.connect(this, "textString", this, "highlightSyntaxDebounced", {});
+            oldHighlight: null,
+            highlightRange: function(from, to) {
+                this.setSelectionRange(from, to);
+                this.scrollSelectionIntoView();
+                this.setSelectionRange(to, to);
+                var highlight = {backgroundColor: Color.web.salmon.lighter(2)};
+                if (this.oldHighlight) {
+                    this.emphasize({backgroundColor: null}, this.oldHighlight[0], this.oldHighlight[1]);
+                }
+                this.oldHighlight = [from, to];
+                this.emphasize(highlight, from, to);
             }
         },{
             _Extent: lively.pt(510.9,20.0),
@@ -491,6 +543,60 @@ lively.BuildSpec('legind.ui.Profiler', {
                     resizeWidth: true
                 },
                 sourceModule: "lively.morphic.Core"
+            },{
+                _BorderColor: Color.rgb(189,190,192),
+                _BorderRadius: 5,
+                _BorderWidth: 1,
+                _Extent: lively.pt(120.0,20.0),
+                _Position: lively.pt(0.9,0.0),
+                _StyleClassNames: ["Morph","Button"],
+                className: "lively.morphic.Button",
+                droppingEnabled: false,
+                grabbingEnabled: false,
+                isPressed: false,
+                label: "Load report.json",
+                name: "LButton",
+                sourceModule: "lively.morphic.Widgets",
+                toggle: false,
+                value: false,
+                connectionRebuilder: function connectionRebuilder() {
+                    lively.bindings.connect(this, "fire", this, "doAction", {});
+                },
+                forEachModel: function(cmodel) {
+                    var cm = new legind.instrumentation[cmodel.cls](cmodel.argIdx);
+                    Object.extend(cm, {
+                        n: cmodel.n,
+                        m: cmodel.m,
+                        meanX: cmodel.meanX,
+                        meanY: cmodel.meanY,
+                        varX: cmodel.varX,
+                        covarXY: cmodel.covarXY,
+                        loss: cmodel.loss,
+                        closs: cmodel.closs
+                    });
+                    return cm;
+                },
+                forEachFunction: function(fn) {
+                    fn.cmodels = fn.cmodels.map(this.forEachModel.bind(this));
+                },
+                showResults: function(results) {
+                    results.each(this.forEachFunction.bind(this));
+                    var resultsPane = lively.BuildSpec('legind.ui.ProfileResult').createMorph();
+                    resultsPane.setResults(results);
+                    var container = this.get("Profiler").submorphs[1];
+                    var tab = container.addTabLabeled("Profiling Results");
+                    tab.setBorderWidth(0);
+                    tab.setExtent(tab.getExtent().withX(145));
+                    container.activateTab(tab);
+                    var pane = tab.getPane();
+                    pane.setBorderWidth(0);
+                    pane.setClipMode({x:"hidden",y:"auto"});
+                    pane.setLayouter(new lively.morphic.Layout.VerticalScrollerLayout(pane));
+                    pane.addMorph(resultsPane);
+                },
+                doAction: function doAction() {
+                    jQuery.getJSON(URL.codeBase + "legind/report.json", this.showResults.bind(this));
+                }
             },{
                 _BorderColor: Color.rgb(189,190,192),
                 _BorderRadius: 5,
