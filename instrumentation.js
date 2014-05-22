@@ -394,6 +394,65 @@ legind.instrumentation.Profiler.subclass('legind.instrumentation.InstructionProf
     }
 });
 
+legind.instrumentation.InstructionProfiler.subclass('legind.instrumentation.NodeJSProfiler',
+'running', {
+    profile: function($super, cb) {
+        legind._enter = this.enter.bind(this);
+        legind._exit = this.exit.bind(this);
+        return $super(cb);
+    },
+    getReport: function($super) {
+        var report = $super();
+        report.each(function(fn) {
+            fn.cmodels = fn.cmodels.map(function(cmodel) {
+                return {
+                    cls: cmodel.constructor.name,
+                    argIdx: cmodel.argIdx,
+                    n: cmodel.n,
+                    m: cmodel.m,
+                    meanX: cmodel.meanX,
+                    meanY: cmodel.meanY,
+                    varX: cmodel.varX,
+                    covarXY: cmodel.covarXY,
+                    loss: cmodel.loss,
+                    closs: cmodel.closs
+                };
+            });
+        });
+        return report;
+    },
+    rewriteAndProfile: function(templates) {
+        var that = this;
+        this.report = Array.from(templates.map(function(e) {
+            return {
+                name: e.name,
+                pos: e.pos,
+                args: Array.from(e.args),
+                inv: [],
+                total: 0,
+                cmodels: e.args.map(function(arg, idx) {
+                    return that.modelsForIdx(idx);
+                }, that).reduce(function(ac,cu) { return ac.concat(cu); }, [])
+            };
+        }));
+        legind._ops = 0;
+        legind._enter = function() {};
+        legind._exit = function() {};
+        legind._profile = (function(cb) {
+            var fs = Global._require('fs');
+            console.log("starting profiling");
+            this.profile(cb);
+            console.log("starting testing");
+            this.testing = true;
+            this.profile(cb);
+            console.log("generating report");
+            var data = JSON.stringify(that.getReport());
+            fs.writeFileSync('./report.json', data);
+            console.log("finished");
+        }).bind(this);
+    }
+});
+
 legind.instrumentation.Profiler.subclass('legind.instrumentation.TimeProfiler',
 'profiling', {
     current: function() {
